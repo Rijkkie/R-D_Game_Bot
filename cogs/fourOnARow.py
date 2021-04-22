@@ -1,16 +1,19 @@
 #===============================================================================
-# Tic-tac-toe v1.0
-# - Last Updated: 19 Apr 2021
+# fourOnARow v1.0
+# - Last Updated: 22 Apr 2021
 #===============================================================================
 # Update History
 # ..............................................................................
-# 19 Apr 2021 - Hacked together some gameplay code. Finished file -YJ
-# 18 Apr 2021 - Started file. Made room creation code. -YJ
+# 22 Apr 2021 - Trial and errored until it worked -RK
+# 21 Apr 2021 - Started file. copied yoris code lol -RK
 #===============================================================================
 # Notes
 # ..............................................................................
-# - Add an expiry timer on that room ID or something, to prevent users from just
-#   starting a bunch of empty rooms and hogging all the IDs. -YJ
+# - Reset reactions after move-RK
+# - SOMTHING THAT SHOWS Who can make a move(color) -RK
+# - Make the game able to have different board sizes, different color styles-
+#  (its now made for darkmode )-RK
+# - Nothing is implemented for ties -RK
 # - Should probably clean this up and make it more functional sometime. -YJ
 #===============================================================================
 # Description
@@ -21,6 +24,7 @@
 #===============================================================================
 
 #Import Modules
+from copy import copy, deepcopy # I imported this as well !!!!!
 import discord
 from discord.ext import commands
 import common
@@ -42,7 +46,11 @@ class fourOnARow(commands.Cog):
                                 #   L> board_state
                                 # L> session
                                 #etc.
-        self.board = ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"]
+        self.fullColumns = 0
+        self.player2 = ""
+        self.player1 = ""
+        self.old_board = [["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"]]
+        self.board = [["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"], ["0","0","0","0","0","0","0"]]
         #board kan dus weg als variable bij sommige functies
 
     #Report successful load.
@@ -57,6 +65,7 @@ class fourOnARow(commands.Cog):
     #Check board state for a winning position
     #Board is now 6*7 which is standard
 
+
     def valid_board(self,board): #checks if the board is 6x7 and consists of only 0s, 1s and 2s
         if(len(board)==6):
             for i in range(6):
@@ -68,6 +77,17 @@ class fourOnARow(commands.Cog):
             return True
         else:
             return False
+
+    def count_turns(self,board,value):
+        counter = 0
+        if(value =="1" or value == "2" ):
+            for i in range(6):
+                for j in range(7):
+                    if(board[i][j]==value):
+                        counter+=1
+        return counter
+
+
 
     def is_game_won(self, board_state): #checks if one player has 4 on a row (to know who won check which move was done last)
         if self.valid_board(board_state):
@@ -105,7 +125,7 @@ class fourOnARow(commands.Cog):
     def column_is_full(self,column, board): #checks if a column is full
         if(column<=7 and column >= 1 and self.valid_board(board)):
             for i in range(6):
-                if(not (board[i][column]=="1" or board[i][column]=="2")):
+                if board[i][column]=="0" :
                     return False
             return True
         else:
@@ -115,7 +135,7 @@ class fourOnARow(commands.Cog):
         if( not (self.column_is_full(column, board))):
             for i in range(6):
                 if(board[5-i][column]=="0"):
-                    new_board = board.copy()
+                    new_board = board
                     new_board[5-i][column] = value
                     return new_board
         else:
@@ -125,7 +145,7 @@ class fourOnARow(commands.Cog):
 
 
     def board_to_msg(self,board): # Translates the board data to a string
-        msg = ""
+        msg = ":red_circle::"+self.player1.mention+"\n:yellow_circle::" +self.player2.mention +"\n\n|:one:|:two:|:three:|:four:|:five:|:six:|:seven:|\n\n"
         zero = ":black_medium_square:|"
         one = ":yellow_circle:|"
         two = ":red_circle:|"
@@ -142,7 +162,7 @@ class fourOnARow(commands.Cog):
                 msg += "\n"
             return msg
         else:
-            return "shit"
+            return "Shit there seems to be the problem with the board"
 
     #Set up tic-tac-toe.
     @commands.command(aliases=["4row", "four_on_a_Row"])
@@ -182,9 +202,10 @@ class fourOnARow(commands.Cog):
                         for session in self.game_sessions:
                             if session[0] == room_id:
                                 random.shuffle(session[2])
-                                msg = ":yellow_circle:: " #+ #(await self.client.fetch_user(session[2][0]).mention)
-                                msg += "\n:red_circle:: " #+ #(await self.client.fetch_user(session[2][1]).mention)
-                                msg += "\n\n|:one:|:two:|:three:|:four:|:five:|:six:|:seven:|\n\n" + self.board_to_msg(self.board) + "\n"
+                                self.player1 = await self.client.fetch_user(session[2][0])
+                                self.player2 = await self.client.fetch_user(session[2][1])
+                                self.board = deepcopy(self.old_board)
+                                msg = self.board_to_msg(self.board)
                                 game_board = await ctx.message.channel.send(msg)
                                 session[1] = game_board
                                 for i in range(7):
@@ -219,10 +240,21 @@ class fourOnARow(commands.Cog):
                 if reaction.emoji in numbers:
                     #Find where to put the token, and which token to place
                     for i in range(7):
-                        if reaction.emoji == number_to_emoji(i+1):
-                            self.make_next_move(i,self.board,"1")
-                            msg += self.board_to_msg(self.board)
-                            await ctx.message.channel.send(msg)
+                        if reaction.emoji == common.number_to_emoji(i+1):
+                            value = "1"
+                            if ((self.count_turns(self.board,"1") + self.count_turns(self.board,"2")) % 2 == 0):
+                                value = "2"
+                            full_c= self.fullColumns #Kan beter dit
+                            for c in range(7):
+                                if(self.column_is_full(c, self.board)):
+                                    full_c += 1
+                            if(full_c>self.fullColumns):
+                                self.fullColumns = full_c
+                                session[2].append(session[2][0])
+                                del session[2][0]
+                            self.board = self.make_next_move(i,self.board,value)
+                            msg = self.board_to_msg(self.board)
+                            break  #maybe problems here when multiple reactions are pressed
 
 
                     #numpos = session[3].find(str(common.emoji_to_number(reaction.emoji)))
@@ -232,11 +264,10 @@ class fourOnARow(commands.Cog):
                     #    token = ":red_circle:"
                     #    char = "x"
                     #msg = msg[:emojipos] + token + msg[emojipos+3:]
-                    #session[3] = session[3][:numpos] + char + session[3][numpos+1:]
                     #Check if game is won, cycle turn to other player if not
                     if self.is_game_won(self.board) == True:
-                        #winner = #await self.client.fetch_user(session[2][0]).mention
-                        msg += f"\n{winner} has won the game!"
+                        winner = await self.client.fetch_user(session[2][0])
+                        msg += f"\n{winner.mention} has won the game!"
                         del self.game_sessions[index]
                     else:
                         session[2].append(session[2][0])
