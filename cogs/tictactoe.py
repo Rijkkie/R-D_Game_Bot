@@ -1,14 +1,18 @@
 #===============================================================================
 # Tic-tac-toe v1.0
-# - Last Updated: 19 Apr 2021
+# - Last Updated: 22 Apr 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 22 Apr 2021 - Fixed bug where the gamebot crashes when trying to 
+# mention a player - RK
 # 19 Apr 2021 - Hacked together some gameplay code. Finished file -YJ
 # 18 Apr 2021 - Started file. Made room creation code. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
+# - should be able to see which player is currently playing (x or o) - RK
+# - reactions should reset after a turn - RK
 # - Add an expiry timer on that room ID or something, to prevent users from just
 #   starting a bunch of empty rooms and hogging all the IDs. -YJ
 # - Should probably clean this up and make it more functional sometime. -YJ
@@ -107,8 +111,10 @@ class Tictactoe(commands.Cog):
                         for session in self.game_sessions:
                             if session[0] == room_id:
                                 random.shuffle(session[2])
-                                msg = "❌: " + self.client.get_user(session[2][0]).mention
-                                msg += "\n⭕: " + self.client.get_user(session[2][1]).mention
+                                player1 = await self.client.fetch_user(session[2][0]) 
+                                player2 = await self.client.fetch_user(session[2][1])
+                                msg = "❌: " + player1.mention
+                                msg += "\n⭕: " + player2.mention
                                 msg += "\n\n1️⃣2️⃣3️⃣\n4️⃣5️⃣6️⃣\n7️⃣8️⃣9️⃣"
                                 game_board = await ctx.message.channel.send(msg)
                                 session[1] = game_board
@@ -153,8 +159,8 @@ class Tictactoe(commands.Cog):
                     session[3] = session[3][:numpos] + char + session[3][numpos+1:]
                     #Check if game is won, cycle turn to other player if not
                     if self.is_game_won(session[3]) == True:
-                        winner = self.client.get_user(session[2][0]).mention
-                        msg += f"\n{winner} has won the game!"
+                        winner = await self.client.fetch_user(session[2][0])
+                        msg += f"\n{winner.mention} has won the game!"
                         del self.game_sessions[index]
                     else:
                         session[2].append(session[2][0])
