@@ -31,6 +31,13 @@ client = commands.Bot(command_prefix = "!")
 @client.event
 async def on_ready():
     print("Games Bot online.")
+    
+#Skips the error output of non-command messages starting with the prefix
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    raise error
 
 #(Re)load Cogs
     #Unloading specific cogs
