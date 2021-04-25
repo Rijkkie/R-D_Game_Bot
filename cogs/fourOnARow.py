@@ -4,8 +4,12 @@
 #===============================================================================
 # Update History
 # ..............................................................................
-# 22 Apr 2021 - Trial and errored until it worked -RK
-# 21 Apr 2021 - Started file. copied yoris code lol -RK
+# 24 Apr 2021 - Added color and name of player that can make a move - RK
+# 24 Apr 2021 - Fixed bug where when one column was filled only one player could
+# play - RK
+# 22 Apr 2021 - Game works for most cases -RK
+# 21 Apr 2021 - Copied parts of tictactoe.py and started to think about
+# what needed to be different -RK
 #===============================================================================
 # Notes
 # ..............................................................................
@@ -18,9 +22,6 @@
 #===============================================================================
 # Description
 # ..............................................................................
-# tictactoe.py plays a game where two players take turns choosing one of nine
-# tiles to place their respective tokens. If three tiles in a row hold the same
-# player's token, that player wins the game.
 #===============================================================================
 
 #Import Modules
@@ -29,11 +30,13 @@ import discord
 from discord.ext import commands
 import common
 import random
+import time
 
 #Cog Setup
 class fourOnARow(commands.Cog):
     #Define variables.
     def __init__(self, client):
+        self.all_numbers = ["0️⃣","1️⃣","2️⃣","3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
         self.client = client
         self.game_sessions = [] #Array holding sessions, structured like this:
                                 #> game_sessions
@@ -72,7 +75,7 @@ class fourOnARow(commands.Cog):
                 if(len(board[i])!=7):
                     return False
                 for j in range(7):
-                    if( not (board[i][j]=="0" or board[i][j]=="1" or board[i][j]=="2")):
+                    if( not (board[i][j]=="0" or board[i][j]=="Yellow" or board[i][j]=="Red")):
                         return False
             return True
         else:
@@ -80,7 +83,7 @@ class fourOnARow(commands.Cog):
 
     def count_turns(self,board,value):
         counter = 0
-        if(value =="1" or value == "2" ):
+        if(value =="Yellow" or value == "Red" ):
             for i in range(6):
                 for j in range(7):
                     if(board[i][j]==value):
@@ -94,21 +97,21 @@ class fourOnARow(commands.Cog):
             #Check for horizontal wins (starting from x = 0 to x = 3 going x = 3 to x = 6)
             for i in range(6):
                 for j in range(4):
-                    if board_state[i][j] == "1" or board_state[i][j] == "2":
+                    if board_state[i][j] == "Yellow" or board_state[i][j] == "Red":
                         token = board_state[i][j]
                         if token == board_state[i][j+1] and token == board_state[i][j+2] and token == board_state[i][j+3]:
                             return True
             #Check for vertical wins
             for j in range(7):
                 for i in range(3):
-                    if board_state[i][j] == "1" or board_state[i][j] == "2":
+                    if board_state[i][j] == "Yellow" or board_state[i][j] == "Red":
                         token = board_state[i][j]
                         if token == board_state[i+1][j] and token == board_state[i+2][j] and token == board_state[i+3][j]:
                             return True
             #Check for diagonal wins left to right
             for j in range(4):
                 for i in range(3):
-                    if board_state[i][j] == "1" or board_state[i][j] == "2":
+                    if board_state[i][j] == "Yellow" or board_state[i][j] == "Red":
                         token = board_state[i][j]
                         if token == board_state[i+1][j+1] and token == board_state[i+2][j+2] and token == board_state[i+3][j+3]:
                             return True
@@ -116,7 +119,7 @@ class fourOnARow(commands.Cog):
             for j in range(4):
                 j += 3
                 for i in range(3):
-                    if board_state[i][j] == "1" or board_state[i][j] == "2":
+                    if board_state[i][j] == "Yellow" or board_state[i][j] == "Red":
                         token = board_state[i][j]
                         if token == board_state[i+1][j-1] and token == board_state[i+2][j-2] and token == board_state[i+3][j-3]:
                             return True
@@ -139,31 +142,40 @@ class fourOnARow(commands.Cog):
                     new_board[5-i][column] = value
                     return new_board
         else:
-            #msg = "column is full."     Here needs to be a message that the column is full if possible/ otherwise check in on_reaction_add if column is full(maybe delete a reaction from numbers as well)
-            #await ctx.message.channel.send(msg)
             return board
 
-
-    def board_to_msg(self,board): # Translates the board data to a string
-        msg = ":red_circle::"+self.player1.mention+"\n:yellow_circle::" +self.player2.mention +"\n\n|:one:|:two:|:three:|:four:|:five:|:six:|:seven:|\n\n"
+    def print_board(self,board,value):
+        msg = ""
         zero = ":black_medium_square:|"
-        one = ":yellow_circle:|"
-        two = ":red_circle:|"
-        if(self.valid_board(board)):
+        yellow = ":yellow_circle:|"
+        red = ":red_circle:|"
+        if self.valid_board(board) and (value =="Yellow" or value == "Red"):
             for i in range(6):
                 msg+="|"
                 for j in range(7):
                     if(board[i][j]=="0"):
                         msg += zero
-                    elif(board[i][j]=="1"):
-                        msg += one
+                    elif(board[i][j]=="Yellow"):
+                        msg += yellow
                     else:
-                        msg += two
+                        msg += red
                 msg += "\n"
             return msg
         else:
-            return "Shit there seems to be the problem with the board"
+            return common.string_to_emoji("ERROR")
 
+
+
+
+
+
+    def board_to_msg(self,board,value): # Translates the board data to a string
+        if value == "Yellow": #switch around the values when this message is called, because the players are not yet swapped
+            msg = "It's your turn :red_circle::"+self.player1.mention + "!"
+        else:
+            msg = "It's your turn :yellow_circle::" +self.player2.mention + "!"
+        msg += "\n\n|:one:|:two:|:three:|:four:|:five:|:six:|:seven:|\n\n" + self.print_board(board,value)
+        return msg
     #Set up tic-tac-toe.
     @commands.command(aliases=["4row", "four_on_a_Row"])
     async def fouronarow(self, ctx, *args):
@@ -205,7 +217,7 @@ class fourOnARow(commands.Cog):
                                 self.player1 = await self.client.fetch_user(session[2][0])
                                 self.player2 = await self.client.fetch_user(session[2][1])
                                 self.board = deepcopy(self.old_board)
-                                msg = self.board_to_msg(self.board)
+                                msg = self.board_to_msg(self.board,"Yellow")
                                 game_board = await ctx.message.channel.send(msg)
                                 session[1] = game_board
                                 for i in range(7):
@@ -230,49 +242,42 @@ class fourOnARow(commands.Cog):
         player_id = user.id
         #Check if a reaction was posted to the message with the board
         for index, session in enumerate(self.game_sessions):
+                            #remove new number reactions to make it more clear
+            new_reaction = copy(reaction.emoji)
+            if user != session[1].author and reaction.emoji in self.all_numbers:
+                await game_board.remove_reaction(reaction.emoji,user)
             if player_id == session[2][0] and game_board.id == session[1].id:
                 #Check if emoji is a number emoji and not replaced by token yet
-                msg = game_board.content
-                numbers = []
+                numbers = [] #Fill numbers with current reactions and delete unnecessary reactions
                 for i in range(7):
-                    if str(i+1) in session[3]:
+                    if not self.column_is_full(i, self.board):
                         numbers.append(common.number_to_emoji(i+1))
-                if reaction.emoji in numbers:
+                if new_reaction in numbers:
                     #Find where to put the token, and which token to place
                     for i in range(7):
                         if reaction.emoji == common.number_to_emoji(i+1):
-                            value = "1"
-                            if ((self.count_turns(self.board,"1") + self.count_turns(self.board,"2")) % 2 == 0):
-                                value = "2"
-                            full_c= self.fullColumns #Kan beter dit
-                            for c in range(7):
-                                if(self.column_is_full(c, self.board)):
-                                    full_c += 1
-                            if(full_c>self.fullColumns):
-                                self.fullColumns = full_c
-                                session[2].append(session[2][0])
-                                del session[2][0]
+                            value = "Yellow" # check which player is currently making a move
+                            if ((self.count_turns(self.board,"Yellow") + self.count_turns(self.board,"Red")) % 2 == 0):
+                                value = "Red"
                             self.board = self.make_next_move(i,self.board,value)
-                            msg = self.board_to_msg(self.board)
-                            break  #maybe problems here when multiple reactions are pressed
+                            if self.column_is_full(i,self.board):
+                                await game_board.clear_reaction(common.number_to_emoji(i+1)) #Remove number of column that is full
+                            msg = self.board_to_msg(self.board,value)
+                            break
 
-
-                    #numpos = session[3].find(str(common.emoji_to_number(reaction.emoji)))
-                    #token = ":yellow_circle:"
-                    #char = "o"
-                    #if (session[3].count("x") + session[3].count("o")) % 2 == 0:
-                    #    token = ":red_circle:"
-                    #    char = "x"
-                    #msg = msg[:emojipos] + token + msg[emojipos+3:]
-                    #Check if game is won, cycle turn to other player if not
-                    if self.is_game_won(self.board) == True:
+                    if self.is_game_won(self.board) == True: # check if game is won by a player
                         winner = await self.client.fetch_user(session[2][0])
-                        msg += f"\n{winner.mention} has won the game!"
+                        await game_board.edit(content=msg)
+                        for i in numbers:
+                            await game_board.clear_reaction(i)
+                        time.sleep(1)
+                        msg = self.board_to_msg(self.board,value) + "\n\n" + common.create_winner_message(winner.name)
                         del self.game_sessions[index]
                     else:
-                        session[2].append(session[2][0])
+                        session[2].append(session[2][0])  #end turn
                         del session[2][0]
                     await game_board.edit(content=msg)
+
 
 #Client Setup
 def setup(client):
