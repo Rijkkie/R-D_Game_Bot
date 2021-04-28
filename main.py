@@ -24,7 +24,7 @@ import sys
 import os
 
 #Define bot client and command prefix
-client = commands.Bot(command_prefix = "!")
+client = commands.Bot(command_prefix = "!", intents=discord.Intents.all())
 #TODO: Make it possible for a server to change their command_prefix
 
 #Report successful login
