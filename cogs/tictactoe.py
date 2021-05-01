@@ -311,8 +311,6 @@ class TictactoeCog(commands.Cog):
             return
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
-            print(reaction.message.id)
-            print(session.message_join.id)
             if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
                 await self.join_game(reaction.message.channel, self.game_sessions, session.room_id, player, self.max_players())
                 return
