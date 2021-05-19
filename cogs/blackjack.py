@@ -689,22 +689,14 @@ class BlackjackCog(commands.Cog):
                 for player in session.players:
                     if player.user.id == user.id and player.turn_finished == False:
                         if session.betting_active:
-                            if reaction.emoji == "⏩":
-                                await self.adjust_bet(session, player, 10)
-                            elif reaction.emoji == "⏪":
-                                await self.adjust_bet(session, player, -10)
-                            elif reaction.emoji == "▶️":
-                                await self.adjust_bet(session, player, 1)
-                            elif reaction.emoji == "◀️":
-                                await self.adjust_bet(session, player, -1)
-                            elif reaction.emoji == "⏹":
+                            if reaction.emoji == "⏹":
                                 player.turn_finished = True
                                 if all(p.turn_finished == True for p in session.players):
                                     await self.setup_midround(session)
                                     return
-                            await reaction.message.remove_reaction(reaction.emoji, user)
+                                await reaction.message.remove_reaction(reaction.emoji, user)
                             return
-                        if len(session.dealer.hand) == 1:
+                        elif len(session.dealer.hand) == 1:
                             if reaction.emoji == "🔼":
                                 player.give_card(self.random_card())
                                 if player.value > 21:
@@ -723,14 +715,15 @@ class BlackjackCog(commands.Cog):
                                 return
                             await reaction.message.remove_reaction(reaction.emoji, user)
                             return
-                        if reaction.emoji == "⏹":
-                            player.turn_finished = True
-                            msg = self.generate_board_message(session)
-                            await session.message_board.edit(content=msg)
-                            if all(p.turn_finished == True for p in session.players):
-                                await self.reset_round(session)
-                                return
-                            await reaction.message.remove_reaction(reaction.emoji, user)
+                        else:
+                            if reaction.emoji == "⏹":
+                                player.turn_finished = True
+                                msg = self.generate_board_message(session)
+                                await session.message_board.edit(content=msg)
+                                if all(p.turn_finished == True for p in session.players):
+                                    await self.reset_round(session)
+                                    return
+                                await reaction.message.remove_reaction(reaction.emoji, user)
                             return
 
 #Client Setup
