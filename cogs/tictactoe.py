@@ -1,14 +1,16 @@
 #===============================================================================
-# Tic-tac-toe v1.1
-# - Last Updated: 30 Apr 2021
+# Tic-tac-toe v1.2
+# - Last Updated: 16 May 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 16 May 2021 - "msg" string legibility improved, max_players is now a variable,
+#               !join no longer case-sensitive, added player list command. -YJ
 # 30 Apr 2021 - Added quit feature, react clears; Improved legibility more. -YJ
 # 29 Apr 2021 - Added react-to-join feature. -YJ
 # 28 Apr 2021 - Saving User instead of User.id now; Added session class;
 #               Improved legibility. -YJ
-# 22 Apr 2021 - Fixed bug where the gamebot crashes when trying to 
+# 22 Apr 2021 - Fixed bug where the gamebot crashes when trying to
 #               mention a player. -RK
 # 19 Apr 2021 - Hacked together some gameplay code; Finished file. -YJ
 # 18 Apr 2021 - Started file; Made room creation code. -YJ
@@ -103,6 +105,7 @@ class TictactoeCog(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.game_sessions = []
+        self.max_players = 2
 
     #Report successful load.
     @commands.Cog.listener()
@@ -112,11 +115,14 @@ class TictactoeCog(commands.Cog):
     #Secondary functions
     #Game instructions
     def instructions(self):
-        return "**Tic-tac-toe Help**\nA game where two players take turns marking spaces in a three-by-three grid to try and get three of their marks in one line. The game will automatically start when it has two players.\nStart with `!ttt new`.\nJoin with `!ttt join XXXX` or by reacting to the join message.\nQuit with `!ttt quit XXXX` or `!ttt quit all`."
-
-    #Maximum number of players, as function to save on permanent variable memory
-    def max_players(self):
-        return 2
+        msg = "**Tic-tac-toe Help**\n"
+        msg += "A game where two players take turns marking spaces in a three-by-three grid to try and get three of their marks in one line. The game will automatically start when it has two players.\n"
+        msg += "`!ttt new`: Start a new room.\n"
+        msg += "`!ttt players XXXX`: Get a list of players in an existing room with its room ID specified in place of XXXX.\n"
+        msg += "`!ttt join XXXX`: Join an existing room with its room ID specified in place of XXXX. This also starts the game.\n"
+        msg += "`!ttt quit XXXX`: Quit a room you're in with its room ID specified in place of XXXX. This also ends the game.\n"
+        msg += "`!ttt quit all`: Quit all rooms you're in. This also ends each game."
+        return
 
     #Check board state for a tie position
     def is_game_tied(self, board_state):
@@ -144,9 +150,9 @@ class TictactoeCog(commands.Cog):
 
     #Generate game board message.
     def generate_board_message(self, session):
-        msg = f"**Tic-tac-toe Room {session.room_id}**"
-        msg += f"\n❌: {session.players[0].mention}"
-        msg += f"\n⭕: {session.players[1].mention}\n"
+        msg = f"**Tic-tac-toe Room {session.room_id}**\n"
+        msg += f"❌: {session.players[0].mention}\n"
+        msg += f"⭕: {session.players[1].mention}\n"
         for column, tile in enumerate(session.board_state):
             if column % 3 == 0:
                 msg += "\n"
@@ -200,18 +206,18 @@ class TictactoeCog(commands.Cog):
         return
 
     #Attempt to add player to room and give feedback.
-    async def join_game(self, channel, game_sessions, room_id, player, max_players):
-        return_code = common.join_room(game_sessions, room_id, player, max_players)
+    async def join_game(self, channel, game_sessions, room_id, player):
+        return_code = common.join_room(game_sessions, room_id.upper(), player, self.max_players)
         msg = "An unknown error occurred."
         if return_code == 0:
             for session in game_sessions:
-                if session.room_id == room_id:
+                if room_id.upper() == session.room_id:
                     await self.setup_game(channel, session)
                     return
         elif return_code == 1:
-            msg = f"{player.name} is already in room {room_id}!"
+            msg = f"{player.name} is already in room {room_id.upper()}!"
         elif return_code == 2:
-            msg = f"Room {room_id} is full."
+            msg = f"Room {room_id.upper()} is full."
         elif return_code == 3:
             msg = f"Room {room_id} does not exist."
         await channel.send(content=msg, delete_after=15.0)
@@ -219,13 +225,14 @@ class TictactoeCog(commands.Cog):
     async def quit_game(self, game_sessions, room_id, player):
         return_code = common.quit_room(game_sessions, room_id, player)
         for session in game_sessions:
-            if room_id == session.room_id:
-                msg = session.message_board.content
-                msg += f"\n{player.mention} has forfeited the game."
-                await session.message_board.edit(content=msg)
-                await session.message_board.clear_reactions()
+            if room_id.upper() == session.room_id:
+                if session.message_board != None:
+                    msg = session.message_board.content
+                    msg += f"\n{player.mention} has forfeited the game."
+                    await session.message_board.edit(content=msg)
+                    await session.message_board.clear_reactions()
                 self.game_sessions.remove(session)
-                return return_code
+                break
         return return_code
 
     #Primary functions
@@ -239,8 +246,29 @@ class TictactoeCog(commands.Cog):
     async def help(self, ctx):
         await ctx.channel.send(self.instructions())
 
+    #See the list of players of a room.
+    @tictactoe.command(aliases=["player", "playerlist", "playerslist", "player_list", "players_list", "list"])
+    async def players(self, ctx, room_id=None):
+        #In case of no room ID specified.
+        if room_id == None:
+            msg = "Please specify a room ID to see its players as `!ttt players XXXX`"
+            await ctx.channel.send(content=msg, delete_after=15.0)
+            return
+        #Return player list of specified room.
+        for session in self.game_sessions:
+            if room_id.upper() == session.room_id:
+                msg = f"Tictactoe Room {room_id.upper()} Players: "
+                for i, player in enumerate(session.players):
+                    if i:
+                        msg += ", "
+                    msg += f"{player.name}"
+                await ctx.channel.send(msg)
+                return
+        msg = f"Tictactoe room {room_id} not found."
+        await ctx.channel.send(msg)
+
     #Register a new game room.
-    @tictactoe.command(aliases=["start", "begin", "create", "host"])
+    @tictactoe.command(aliases=["start", "begin", "create", "register", "host"])
     async def new(self, ctx):
         room_id = common.generate_room_id(self.game_sessions)
         #Save new session
@@ -248,7 +276,8 @@ class TictactoeCog(commands.Cog):
         session.add_player(ctx.author)
         self.game_sessions.append(session)
         #Send session's room ID
-        msg = f"New tic-tac-toe room created! Your room ID is: {room_id}.\nOthers can join by typing `!ttt join {room_id}`"
+        msg = f"New tic-tac-toe room created! Your room ID is: {room_id}.\n"
+        msg += f"Others can join by typing `!ttt join {room_id}`"
         if ctx.guild != None:
             msg += " or by reacting to this message with ▶️."
             join_message = await ctx.channel.send(msg)
@@ -260,13 +289,18 @@ class TictactoeCog(commands.Cog):
     #Join an existing game room by message.
     @tictactoe.command(aliases=["enter"])
     async def join(self, ctx, room_id=None):
+        #In case of joining through DMs.
+        if ctx.guild == None:
+            msg = "Please join the game in a public channel."
+            await ctx.channel.send(content=msg, delete_after=15.0)
+            return
         #In case of no room ID specified.
         if room_id == None:
             msg = "Please specify a room ID to join as `!ttt join XXXX`"
             await ctx.channel.send(content=msg, delete_after=15.0)
             return
         #Join room with specified room ID.
-        await self.join_game(ctx.channel, self.game_sessions, room_id.upper(), ctx.author, self.max_players())
+        await self.join_game(ctx.channel, self.game_sessions, room_id.upper(), ctx.author)
 
     #Quit a room.
     @tictactoe.command(aliases=["stop", "exit", "end", "leave"])
@@ -286,9 +320,9 @@ class TictactoeCog(commands.Cog):
                     rooms_quit += 1
             msg = "An unknown error occurred."
             if rooms_quit == 0:
-                msg = f"{ctx.author.name} is not in any rooms."
+                msg = f"{ctx.author.name} is not in any tictactoe rooms."
             else:
-                msg = f"Removed {ctx.author.name} from {rooms_quit} room(s)."
+                msg = f"Removed {ctx.author.name} from {rooms_quit} tictactoe room(s)."
             await ctx.channel.send(content=msg, delete_after=15.0)
             return
 
@@ -296,11 +330,11 @@ class TictactoeCog(commands.Cog):
         return_code = await self.quit_game(self.game_sessions, room_id.upper(), ctx.author)
         msg = "An unknown error occurred."
         if return_code == 0:
-            msg = f"Removed {ctx.author.name} from room {room_id}."
+            msg = f"Removed {ctx.author.name} from tictactoe room {room_id.upper()}."
         elif return_code == 1:
-            msg = f"{ctx.author.name} is not in room {room_id}."
+            msg = f"{ctx.author.name} is not in tictactoe room {room_id.upper()}."
         elif return_code == 2:
-            msg = f"Room {room_id} does not exist."
+            msg = f"Tictactoe room {room_id} not found."
         await ctx.channel.send(content=msg, delete_after=15.0)
 
     #Reaction handling
@@ -312,7 +346,7 @@ class TictactoeCog(commands.Cog):
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
             if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
-                await self.join_game(reaction.message.channel, self.game_sessions, session.room_id, player, self.max_players())
+                await self.join_game(reaction.message.channel, self.game_sessions, session.room_id, player)
                 return
 
             #Taking turn by reacting with number emoji
