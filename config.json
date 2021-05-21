@@ -1,0 +1,10 @@
+{
+  "token": "insert-bot-token",
+  "prefix": "!",
+  "mysql": {
+    "user": "",
+    "password": "",
+    "host": "localhost",
+    "database": ""
+  }
+}
