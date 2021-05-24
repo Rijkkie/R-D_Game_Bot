@@ -1,14 +1,16 @@
 #===============================================================================
-# Discord Games Bot v1.0
-# - Last Updated: 18 Apr 2021
+# Discord Games Bot v1.1
+# - Last Updated: 23 Apr 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 23 Apr 2021 - Error output for non-command messages disabled by TN. -YJ
 # 18 Apr 2021 - Started and finished file. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
-# - Make it possible for a server to change their command_prefix -YJ
+# - Get the bot key from an env instead of relying on command line input. -YJ
+# - Make it possible for a server to change their command_prefix. -YJ
 #===============================================================================
 # Description
 # ..............................................................................
@@ -31,7 +33,7 @@ client = commands.Bot(command_prefix = "!")
 @client.event
 async def on_ready():
     print("Games Bot online.")
-    
+
 #Skips the error output of non-command messages starting with the prefix
 @client.event
 async def on_command_error(ctx, error):
@@ -63,14 +65,14 @@ async def reload(ctx, extension):
 @client.command(aliases=["reloadall"])
 async def reload_all(ctx):
     for filename in os.listdir("./cogs"):
-        if filename.endswith(".py") and filename != "common.py":
+        if filename.endswith(".py"):
             client.unload_extension(f"cogs.{filename[:-3]}")
             client.load_extension(f"cogs.{filename[:-3]}")
     print(f'Reloaded all cogs.')
 
 #Loading cogs at startup
 for filename in os.listdir("./cogs"):
-    if filename.endswith(".py") and filename != "common.py":
+    if filename.endswith(".py"):
         client.load_extension(f"cogs.{filename[:-3]}")
 
 #Login
