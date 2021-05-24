@@ -1,20 +1,16 @@
 #===============================================================================
-# Blackjack v1.0
-# - Last Updated: 19 May 2021
+# Blackjack v1.1
+# - Last Updated: 23 May 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 23 May 2021 - All classes now extend a base class. -YJ
 # 19 May 2021 - Finished file. -YJ
 # 12 May 2021 - Started file. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
-# - Improve legibility more, define more common functions. Define common classes
-#   for things like Sessions and Players, extend those for specific games. -YJ
-# - This file doesn't use common.join_room or common.quit_room because they do
-#   not fit with BlackjackPlayer. This is basically an extension of the previous
-#   note, but common needs to work with a general common Player class instead of
-#   directly relying on the User type. -YJ
+#
 #===============================================================================
 # Description
 # ..............................................................................
@@ -48,24 +44,24 @@
 import discord
 from discord import Message, User
 from discord.ext import commands
-import common
+
+from common.session import Session
+from common.player import Player
+from common.game import Game
+from common.card import Card, random_card
+
 import random
 import math
 
-#Player Setup
-class BlackjackPlayer:
-    #Define variables.
+#Player Class
+class BlackjackPlayer(Player):
     def __init__(self, user: User):
-        self.__user = user
+        Player.__init__(self, user)
         self.__hand = []
         self.__funds = 100
         self.__bet = 10
         self.__doubled_down = False
         self.__turn_finished = False
-
-    @property
-    def user(self):
-        return self.__user
 
     @property
     def hand(self):
@@ -120,30 +116,19 @@ class BlackjackPlayer:
         self.__funds = amount
 
     #Add a card.
-    def give_card(self, card: common.Card):
+    def give_card(self, card: Card):
         self.__hand.append(card)
 
-#Session Setup
-class BlackjackSession:
-    #Define variables.
-    def __init__(self, room_id: str):
-        self.__room_id = room_id
-        self.__players = []
+#Session Class
+class BlackjackSession(Session):
+    def __init__(self, game_sessions):
+        Session.__init__(self, game_sessions)
         self.__max_players = 7
         self.__dealer = BlackjackPlayer(None)
         self.__betting_active = False
         self.__round = 0
         self.__max_rounds = 10
         self.__message_board = None
-        self.__message_join = None
-
-    @property
-    def room_id(self):
-        return self.__room_id
-
-    @property
-    def players(self):
-        return self.__players
 
     @property
     def max_players(self):
@@ -169,10 +154,6 @@ class BlackjackSession:
     def message_board(self):
         return self.__message_board
 
-    @property
-    def message_join(self):
-        return self.__message_join
-
     @betting_active.setter
     def betting_active(self, truth: bool):
         self.__betting_active = truth
@@ -193,30 +174,12 @@ class BlackjackSession:
     def message_board(self, message_board: Message):
         self.__message_board = message_board
 
-    @message_join.setter
-    def message_join(self, message_join: Message):
-        self.__message_join = message_join
-
-    #Add players.
-    def add_player(self, player: User):
-        if player not in self.__players:
-            self.__players.append(player)
-
-    #Remove player.
-    def remove_player(self, player: BlackjackPlayer):
-        if player in self.__players:
-            self.__players.remove(player)
-
-    #Shuffle players.
-    def shuffle_players(self):
-        random.shuffle(self.__players)
-
-#Cog Setup
-class BlackjackCog(commands.Cog):
-    #Define variables.
+#Cog Class
+class BlackjackCog(Game):
     def __init__(self, client):
-        self.client = client
-        self.game_sessions = []
+        Game.__init__(self, client)
+        self.game_name = "Blackjack"
+        self.game_abbrev = "bj"
         self.bet_min = 1
         self.bet_max = 100
 
@@ -229,7 +192,7 @@ class BlackjackCog(commands.Cog):
     #Game instructions
     def instructions(self):
         msg = "**Blackjack Help**\n"
-        msg += "Get below 21, beat the dealer, etc.\n"
+        msg += "Collect cards in your hand that exceed the value of the dealer's hand, but don't go over 21! Face cards are worth 10, and aces are worth either 11 or 1. Hit to receive a card, stand to confirm you are done hitting. Double down to double your bet and receive one final card.\n"
         msg += "`!bj new`: Start a new room.\n"
         msg += "`!bj set`: Get details on how to edit the game settings of a room.\n"
         msg += "`!bj join XXXX`: Join an existing room with its room ID specified in place of XXXX.\n"
@@ -239,6 +202,14 @@ class BlackjackCog(commands.Cog):
         msg += "`!bj quit XXXX`: Quit a room you're in with its room ID specified in place of XXXX. The game continues if other players remain.\n"
         msg += "`!bj quit all`: Quit all rooms you're in. The games continue if other players remain."
         return msg
+
+    #Get maximum amount of players of a session.
+    def get_max_players(self, session):
+        return session.max_players
+
+    #Check whether a game has started yet.
+    def has_game_started(self, session):
+        return session.round > 0
 
     #Generate game board message.
     def generate_board_message(self, session):
@@ -322,11 +293,11 @@ class BlackjackCog(commands.Cog):
     #Deal cards, send hit/stand message, add reactions.
     async def setup_midround(self, session):
         session.betting_active = False
-        session.dealer.give_card(self.random_card())
+        session.dealer.give_card(random_card())
         for player in session.players:
             player.turn_finished = False
             for _ in range(2):
-                player.give_card(self.random_card())
+                player.give_card(random_card())
         msg = self.generate_board_message(session)
         #session.message_board = await session.message_board.channel.send(msg)
         await session.message_board.edit(content=msg)
@@ -338,7 +309,7 @@ class BlackjackCog(commands.Cog):
     #Dealer draws until 17+, process wins/ties/losses.
     async def setup_endround(self, session):
         while session.dealer.value < 17:
-            session.dealer.give_card(self.random_card())
+            session.dealer.give_card(random_card())
         for player in session.players:
             player.turn_finished = False
             if player.value > 21 or (player.value < session.dealer.value and session.dealer.value <= 21):
@@ -365,32 +336,26 @@ class BlackjackCog(commands.Cog):
             return
         msg = self.generate_board_message(session)
         await session.message_board.channel.send(msg)
+        self.game_sessions.remove(session)
 
-    def quit_game(self, session, user):
-        for i, player_in_session in enumerate(session.players):
-            if player_in_session.user.id == user.id:
-                if len(session.players) == 1:
-                    self.game_sessions.remove(session)
-                else:
-                    session.remove_player(session.players[i])
-                return 0 #Player removed from room.
-        return 1 #Player wasn't in the room.
+    #Setup the initial variables and message(s) of the game.
+    async def setup_game(self, session, channel):
+        session.round = 1
+        await self.setup_beginround(session, channel)
 
-    def join_game(self, session, user):
-        for player_in_session in session.players:
-            if player_in_session.user.id == user.id:
-                return 1 #Player is already in the room.
-        if session.max_players > 0 and len(session.players) >= session.max_players:
-            return 2 #Room is full.
-        session.add_player(BlackjackPlayer(player))
-        return 0 #Player was not in the room; Added player to room.
-
-    #Deal a random card.
-    def random_card(self):
-        suit = random.choice(["Hearts", "Diamonds", "Spades", "Clubs"])
-        value = random.choice(range(1, 14))
-        card = common.Card(suit, value)
-        return card
+    #Handle additional checks required when a player quits the game.
+    async def remove_player(self, session, user):
+        session.remove_player(user)
+        if session.message_board != None:
+            if len(session.players) <= 0:
+                await session.message_board.delete()
+                self.game_sessions.remove(session)
+                return
+            msg = self.generate_board_message(session)
+            await session.message_board.edit(content=msg)
+            return
+        if len(session.players) <= 0:
+            self.game_sessions.remove(session)
 
     #Primary Functions
     #With no arguments specified, send game instructions.
@@ -404,100 +369,32 @@ class BlackjackCog(commands.Cog):
         await ctx.channel.send(self.instructions())
 
     #See the list of players of a room.
-    @blackjack.command(aliases=["player", "playerlist", "playerslist", "player_list", "players_list", "list"])
-    async def players(self, ctx, room_id=None):
-        #In case of no room ID specified.
-        if room_id == None:
-            msg = "Please specify a room ID to see its players as `!bj players XXXX`"
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #Return player list of specified room.
-        for session in self.game_sessions:
-            if room_id.upper() == session.room_id:
-                msg = f"Blackjack Room {room_id.upper()} Players: "
-                for i, player in enumerate(session.players):
-                    if i:
-                        msg += ", "
-                    msg += f"{player.user.name}"
-                await ctx.channel.send(msg)
-                return
-        msg = f"Blackjack room {room_id} not found."
-        await ctx.channel.send(msg)
+    @blackjack.command(aliases=["player", "players", "playerlist", "playerslist", "players_list", "list"])
+    async def player_list(self, ctx, room_id=None):
+        await Game.player_list(self, ctx, room_id)
 
     #Register a new game room.
     @blackjack.command(aliases=["create", "register", "host"])
     async def new(self, ctx):
-        room_id = common.generate_room_id(self.game_sessions)
-        #Save new session
-        session = BlackjackSession(room_id)
+        session = BlackjackSession(self.game_sessions)
         player = BlackjackPlayer(ctx.author)
-        session.add_player(player)
-        self.game_sessions.append(session)
-        #Send session's room ID
-        msg = f"New blackjack room created! Your room ID is: {room_id}.\n"
-        msg += f"The game can be started typing `!bj start {room_id}`\n"
-        msg += f"Others can join by typing `!bj join {room_id}`"
-        if ctx.guild != None:
-            msg += " or by reacting to this message with ▶️."
-            join_message = await ctx.channel.send(msg)
-            session.message_join = join_message
-            await join_message.add_reaction("▶️")
-            return
-        await ctx.channel.send(msg)
+        await Game.new(self, ctx, session, player)
 
     #Join an existing game room by message.
     @blackjack.command(aliases=["enter"])
     async def join(self, ctx, room_id=None):
-        #In case of no room ID specified.
-        if room_id == None:
-            msg = "Please specify a room ID to join as `!bj join XXXX`"
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #Join room with specified room ID.
-        return_code = 3
-        for session in self.game_sessions:
-            if room_id.upper() == session.room_id:
-                return_code = self.join_game(session, ctx.author)
-                if return_code == 0 and session.message_board != None:
-                    msg = self.generate_board_message()
-                    await session.message_board.edit(content=msg)
-        msg = "An unknown error occurred."
-        if return_code == 0:
-            msg = f"{ctx.author.name} joined room {room_id.upper()}!"
-        elif return_code == 1:
-            msg = f"{ctx.author.name} is already in room {room_id.upper()}!"
-        elif return_code == 2:
-            msg = f"Room {room_id.upper()} is full."
-        elif return_code == 3:
-            msg = f"Room {room_id} does not exist."
-        await ctx.channel.send(content=msg, delete_after=15.0)
+        player = BlackjackPlayer(ctx.author)
+        await Game.join(self, ctx, room_id, player)
 
     #Start a game.
     @blackjack.command(aliases=["begin"])
     async def start(self, ctx, room_id=None):
-        #In case of trying to start game in DMs.
-        if ctx.guild == None:
-            msg = "Please start the game in a public channel."
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #In case of no room ID specified.
-        if room_id == None:
-            msg = "Please specify a room ID to start its game as `!bj start XXXX`"
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #Start game in specified room ID.
-        for session in self.game_sessions:
-            if room_id.upper() == session.room_id:
-                for player in session.players:
-                    if ctx.author.id == player.user.id:
-                        session.round = 1
-                        await self.setup_beginround(session, ctx.channel)
-                        return
-                msg = f"You are not in room {session.room_id}."
-                await ctx.channel.send(content=msg, delete_after=15.0)
-                return
-        msg = f"Blackjack room {room_id} not found."
-        await ctx.channel.send(content=msg, delete_after=15.0)
+        await Game.start(self, ctx, room_id)
+
+    #Quit a room.
+    @blackjack.command(aliases=["stop", "exit", "end", "leave"])
+    async def quit(self, ctx, room_id=None):
+        await Game.quit(self, ctx, room_id)
 
     #Bet by message.
     @blackjack.command(aliases=[])
@@ -524,65 +421,10 @@ class BlackjackCog(commands.Cog):
                         msg = f"You cannot bet in a room where the game has not started."
                         await ctx.channel.send(content=msg, delete_after=15.0)
                         return
-                msg = f"You are not in room {session.room_id}."
+                msg = f"You are not in Blackjack room {session.room_id}."
                 await ctx.channel.send(content=msg, delete_after=15.0)
                 return
         msg = f"Blackjack room {room_id} not found."
-        await ctx.channel.send(content=msg, delete_after=15.0)
-
-    #Quit a room.
-    @blackjack.command(aliases=["stop", "exit", "end", "leave"])
-    async def quit(self, ctx, room_id=None):
-        #In case of no room ID specified
-        if room_id == None:
-            msg = "Please specify a room ID to quit as `!bj quit XXXX` or use `!bj quit all`"
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-
-        #Quit all rooms a player is in.
-        if room_id.lower() in ["all", "every", "everything"]:
-            rooms_quit = 0
-            for session in reversed(self.game_sessions):
-                for player in session.players:
-                    if ctx.author.id == player.user.id:
-                        rooms_quit += 1
-                        if len(session.players) == 1:
-                            await session.message_board.delete()
-                            self.quit_game(session, ctx.author)
-                            break
-                        self.quit_game(session, ctx.author)
-                        msg = self.generate_board_message()
-                        await session.message_board.edit(content=msg)
-                        break
-            msg = "An unknown error occurred."
-            if rooms_quit == 0:
-                msg = f"{ctx.author.name} is not in any blackjack rooms."
-            else:
-                msg = f"Removed {ctx.author.name} from {rooms_quit} blackjack room(s)."
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-
-        #Quit a specific room
-        return_code = 2
-        for session in self.game_sessions:
-            if session.room_id == room_id.upper():
-                if len(session.players) == 1:
-                    message_board = session.message_board
-                    return_code = self.quit_game(session, ctx.author)
-                    if return_code == 0:
-                        await message_board.delete()
-                    break
-                return_code = self.quit_game(session, ctx.author)
-                msg = self.generate_board_message()
-                await session.message_board.edit(content=msg)
-                break
-        msg = "An unknown error occurred."
-        if return_code == 0:
-            msg = f"Removed {ctx.author.name} from blackjack room {room_id.upper()}."
-        elif return_code == 1:
-            msg = f"{ctx.author.name} is not in blackjack room {room_id.upper()}."
-        elif return_code == 2:
-            msg = f"Blackjack room {room_id} not found."
         await ctx.channel.send(content=msg, delete_after=15.0)
 
     #Edit a room's settings.
@@ -600,7 +442,7 @@ class BlackjackCog(commands.Cog):
         #With only a room ID specified, show current settings for the room.
         for session in self.game_sessions:
             if room_id.upper() == session.room_id:
-                msg = f"**Blackjack Room {room_id.upper()} Settings**\n"
+                msg = f"**Blackjack Room {session.room_id} Settings**\n"
                 msg += f"Maximum Players: {session.max_players}\n"
                 msg += f"Rounds: {session.max_rounds}"
                 await ctx.channel.send(msg)
@@ -609,68 +451,23 @@ class BlackjackCog(commands.Cog):
         await ctx.channel.send(content=msg, delete_after=15.0)
 
     #Change the amount of players that can join a game.
-    @setting.command(aliases=["player", "players", "maxplayer", "max_players", "max_player", "playercount", "player_count", "totalplayers", "total_players"])
-    async def maxplayers(self, ctx, max_players=None, room_id=None):
-        #With no arguments specified, send setting instructions.
-        if max_players == None or room_id == None:
-            msg = "Please specify a maximum player count and a room ID to apply the setting to as `!bj set players YY XXXX`"
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #Check if an integer was supplied.
-        if max_players.isdigit() == False:
-            msg = "Please specify a number for the maximum player count."
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #Set max_players for supplied room_id.
-        for session in self.game_sessions:
-            if room_id.upper() == session.room_id:
-                for player in session.players:
-                    if ctx.author.id == player.user.id:
-                        if session.round > 0:
-                            msg = "Cannot change maximum player count after game has started."
-                            await ctx.channel.send(content=msg, delete_after=15.0)
-                            return
-                        session.max_players = int(max_players)
-                        msg = f"Maximum player count for blackjack room {room_id} set to {max_players}"
-                        await ctx.channel.send(content=msg, delete_after=15.0)
-                        return
-                msg = f"You are not in room {session.room_id}"
-                await ctx.channel.send(content=msg, delete_after=15.0)
-                return
-        msg = f"Blackjack room {room_id} not found."
-        await ctx.channel.send(content=msg, delete_after=15.0)
+    @setting.command(aliases=["player", "players", "maxplayer", "maxplayers", "max_player", "max_players", "playercount", "player_count", "totalplayers", "total_players"])
+    async def set_max_players(self, ctx, max_players=None, room_id=None):
+        return_value = await Game.set_max_players(self, ctx, max_players, room_id)
+        if return_value != None:
+            for session in self.game_sessions:
+                if room_id.upper() == session.room_id:
+                    session.max_players = return_value
 
     #Change the amount of rounds a game will go on for.
-    @setting.command(aliases=["round", "rounds", "maxround", "max_rounds", "max_round", "roundcount", "round_count", "totalrounds", "total_rounds"])
-    async def maxrounds(self, ctx, max_rounds=None, room_id=None):
+    @setting.command(aliases=["round", "rounds", "maxround", "maxrounds", "max_round", "max_rounds", "roundcount", "round_count", "totalrounds", "total_rounds"])
+    async def set_max_rounds(self, ctx, max_rounds=None, room_id=None):
         #With no arguments specified, send setting instructions.
-        if max_rounds == None or room_id == None:
-            msg = "Please specify a total amount of rounds and a room ID to apply the setting to as `!bj set rounds YY XXXX`"
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #Check if an integer was supplied.
-        if max_rounds.isdigit() == False:
-            msg = "Please specify a number for the total amount of rounds."
-            await ctx.channel.send(content=msg, delete_after=15.0)
-            return
-        #Set max_rounds for supplied room_id.
-        for session in self.game_sessions:
-            if room_id.upper() == session.room_id:
-                for player in session.players:
-                    if ctx.author.id == player.user.id:
-                        if session.round > 0:
-                            msg = "Cannot change maximum amount of rounds after game has started."
-                            await ctx.channel.send(content=msg, delete_after=15.0)
-                            return
-                        session.max_rounds = int(max_rounds)
-                        msg = f"Total amount of rounds for blackjack room {room_id} set to {max_rounds}"
-                        await ctx.channel.send(content=msg, delete_after=15.0)
-                        return
-                msg = f"You are not in room {session.room_id}"
-                await ctx.channel.send(content=msg, delete_after=15.0)
-                return
-        msg = f"Blackjack room {room_id} not found."
-        await ctx.channel.send(content=msg, delete_after=15.0)
+        return_value = await Game.set_max_rounds(self, ctx, max_rounds, room_id)
+        if return_value != None:
+            for session in self.game_sessions:
+                if room_id.upper() == session.room_id:
+                    session.max_rounds = return_value
 
     #Reaction handling
     @commands.Cog.listener()
@@ -681,7 +478,8 @@ class BlackjackCog(commands.Cog):
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
             if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
-                await self.join_game(reaction.message.channel, self.game_sessions, session.room_id, user)
+                ctx = await self.client.get_context(reaction.message)
+                await Game.join(self, ctx, session.room_id, BlackjackPlayer(user))
                 return
 
             #Taking turn by reacting with emoji
@@ -698,14 +496,14 @@ class BlackjackCog(commands.Cog):
                             return
                         elif len(session.dealer.hand) == 1:
                             if reaction.emoji == "🔼":
-                                player.give_card(self.random_card())
+                                player.give_card(random_card())
                                 if player.value > 21:
                                     player.turn_finished = True
                             elif reaction.emoji == "⏹":
                                 player.turn_finished = True
                             elif reaction.emoji == "⏬":
                                 player.bet *= 2
-                                player.give_card(self.random_card())
+                                player.give_card(random_card())
                                 player.doubled_down = True
                                 player.turn_finished = True
                             msg = self.generate_board_message(session)
