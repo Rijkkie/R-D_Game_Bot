@@ -4,6 +4,7 @@
 #===============================================================================
 # Update History
 # ..............................................................................
+# 25 May 2021 - Added add_player to support checks on player join. -YJ
 # 23 May 2021 - Started and finished file. -YJ
 #===============================================================================
 # Notes
@@ -56,6 +57,10 @@ class Game(commands.Cog):
     #Setup the initial variables and message(s) of the game. Override if needed.
     async def setup_game(self):
         pass
+
+    #Handle additional checks required when a player joins the game. Override if needed.
+    async def add_player(self, session, user):
+        session.add_player(user)
 
     #Handle additional checks required when a player quits the game. Override if needed.
     async def remove_player(self, session, user):
@@ -124,7 +129,7 @@ class Game(commands.Cog):
                     msg = f"{self.game_name} room {session.room_id} is full."
                     break
                 #Add player to room
-                session.add_player(player)
+                self.add_player(player)
                 if self.instant_start == True:
                     await self.setup_game(session, ctx.channel)
                     return
@@ -235,7 +240,7 @@ class Game(commands.Cog):
             return None
         #Check if an integer was supplied.
         if max_rounds.isdigit() == False or int(max_rounds) == 0:
-            msg = "Please specify a number for the total amount of rounds."
+            msg = "Please specify a positive integer for the total amount of rounds."
             await ctx.channel.send(content=msg, delete_after=15.0)
             return None
         #Set max_rounds for supplied room_id.
