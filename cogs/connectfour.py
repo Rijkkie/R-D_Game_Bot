@@ -82,7 +82,7 @@ class ConnectFourSession(Session):
         self.__player_turn = (self.__player_turn + 1) % len(self.players)
 
 #Cog Setup
-class ConnectFour(Game):
+class ConnectFourCog(Game):
     #Define variables.
     def __init__(self, client):
         Game.__init__(self, client)
@@ -106,6 +106,7 @@ class ConnectFour(Game):
         msg += "`!c4 players XXXX`: Get a list of players in an existing room with its room ID specified in place of XXXX.\n"
         msg += "`!c4 quit XXXX`: Quit a room you're in with its room ID specified in place of XXXX. This also ends the game.\n"
         msg += "`!c4 quit all`: Quit all rooms you're in. This also ends each game."
+        return msg
 
     #Get maximum amount of players of a session.
     def get_max_players(self, session):
@@ -281,4 +282,4 @@ class ConnectFour(Game):
 
 #Client Setup
 def setup(client):
-    client.add_cog(ConnectFour(client))
+    client.add_cog(ConnectFourCog(client))
