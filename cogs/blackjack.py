@@ -496,6 +496,8 @@ class BlackjackCog(Game):
                         if session.betting_active:
                             if reaction.emoji == "⏹":
                                 player.turn_finished = True
+                                msg = self.generate_board_message(session)
+                                await session.message_board.edit(content=msg)
                                 if all(p.turn_finished == True for p in session.players):
                                     await self.setup_midround(session)
                                     return
