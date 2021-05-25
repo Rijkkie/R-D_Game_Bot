@@ -126,7 +126,7 @@ class HangmanCog(Game):
     #Game instructions
     def instructions(self):
         msg = "**Hangman Help**\n"
-        msg += "Guess the secret word!\n"
+        msg += "Guess the secret word, one character at a time. But don't make too many mistakes, or you'll hang!\n"
         msg += "`!hm new`: Start a new room.\n"
         msg += "`!hm set`: Get details on how to edit the game settings of a room.\n"
         msg += "`!hm join XXXX`: Join an existing room with its room ID specified in place of XXXX.\n"
@@ -168,6 +168,8 @@ class HangmanCog(Game):
             if i:
                 msg += ", "
             msg += f"{player.user.mention}"
+        #Line: Instructions
+        msg += f"Guess by typing `!hm guess Y {session.room_id}`, replacing Y with your guess."
         msg += "\n\n```"
         #Line: Ceiling
         msg += "┌" if session.mistakes_permitted <= 7 else "╷" if session.mistakes_permitted <= 8 else " "
@@ -212,9 +214,15 @@ class HangmanCog(Game):
             msg += f"{letter} " if letter in session.guessed_letters else "_ "
         msg += "```\n"
         if self.is_game_won(session) == True:
+            if len(session.players) == 1:
+                msg += f"{session.players[0].user.mention} has won!"
+                return msg
             msg += "The players have won!"
             return msg
         if self.is_game_lost(session) == True:
+            if len(session.players) == 1:
+                msg += f"{session.players[0].user.mention} has lost. The word was `{session.secret_word}`."
+                return msg
             msg += f"The players have lost. The word was `{session.secret_word}`."
             return msg
         msg += f"{session.players[session.player_turn].user.mention}'s turn!"
@@ -248,6 +256,13 @@ class HangmanCog(Game):
         session.next_turn()
         msg = self.generate_board_message(session)
         await session.message_board.edit(content=msg)
+
+    #Handle additional checks required when a player joins the game.
+    async def add_player(self, session, user):
+        session.add_player(user)
+        if session.message_board != None:
+            msg = self.generate_board_message(session)
+            await session.message_board.edit(content=msg)
 
     #Handle additional checks required when a player quits the game.
     async def remove_player(self, session, user):
