@@ -1,2 +1,2 @@
-py -3 main.py KEY
+py -3 main.py
 pause

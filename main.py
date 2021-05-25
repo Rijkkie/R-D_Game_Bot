@@ -1,9 +1,10 @@
 #===============================================================================
 # Discord Games Bot v1.1
-# - Last Updated: 23 Apr 2021
+# - Last Updated: 25 Apr 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 25 Apr 2021 - Added config file for the prefix and key. Added discord intents
 # 23 Apr 2021 - Error output for non-command messages disabled by TN. -YJ
 # 18 Apr 2021 - Started and finished file. -YJ
 #===============================================================================
@@ -24,9 +25,12 @@ import discord
 from discord.ext import commands
 import sys
 import os
+import json
+with open("./config.json") as config_file:
+    config = json.load(config_file)
 
 #Define bot client and command prefix
-client = commands.Bot(command_prefix = "!")
+client = commands.Bot(command_prefix=config["prefix"], intents=discord.Intents.all())
 #TODO: Make it possible for a server to change their command_prefix
 
 #Report successful login
@@ -38,6 +42,8 @@ async def on_ready():
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
+        return
+    elif isinstance(error, commands.MemberNotFound):
         return
     raise error
 
@@ -76,5 +82,4 @@ for filename in os.listdir("./cogs"):
         client.load_extension(f"cogs.{filename[:-3]}")
 
 #Login
-key = str(sys.argv[1])
-client.run(key)
+client.run(config["token"])
