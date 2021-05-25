@@ -116,7 +116,7 @@ WHERE not exists(
    FROM transaction
    WHERE transaction.user_id = user.id);
 
-CREATE VIEW `total_stats` as
+CREATE VIEW `total_boardgame_stats` as
 SELECT user_id, sum(wins) as wins, sum(losses) as losses, sum(draws) as draws, sum(score) as score
 FROM stats
 GROUP BY user_id;
