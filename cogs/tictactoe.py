@@ -99,7 +99,7 @@ class TictactoeCog(Game):
         msg += "`!ttt players XXXX`: Get a list of players in an existing room with its room ID specified in place of XXXX.\n"
         msg += "`!ttt quit XXXX`: Quit a room you're in with its room ID specified in place of XXXX. This also ends the game.\n"
         msg += "`!ttt quit all`: Quit all rooms you're in. This also ends each game."
-        return
+        return msg
 
     #Get maximum amount of players of a session.
     def get_max_players(self, session):
