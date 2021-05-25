@@ -17,11 +17,6 @@
 #===============================================================================
 # Notes
 # ..............................................................................
-# - Reset reactions after move-RK
-# - SOMTHING THAT SHOWS Who can make a move(color) -RK
-# - Make the game able to have different board sizes, different color styles-
-#  (its now made for darkmode )-RK
-# - Nothing is implemented for ties -RK
 #===============================================================================
 # Description
 # ..............................................................................
