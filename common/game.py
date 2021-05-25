@@ -88,7 +88,7 @@ class Game(commands.Cog):
 
     #Register a new game room.
     async def new(self, ctx, session, player):
-        session.add_player(player)
+        await self.add_player(session, player)
         self.game_sessions.append(session)
         #Send session's room ID
         msg = f"New {self.game_name} room created! Your room ID is: {session.room_id}.\n"
@@ -129,7 +129,7 @@ class Game(commands.Cog):
                     msg = f"{self.game_name} room {session.room_id} is full."
                     break
                 #Add player to room
-                self.add_player(player)
+                await self.add_player(session, player)
                 if self.instant_start == True:
                     await self.setup_game(session, ctx.channel)
                     return
