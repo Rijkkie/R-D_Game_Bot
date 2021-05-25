@@ -343,6 +343,13 @@ class BlackjackCog(Game):
         session.round = 1
         await self.setup_beginround(session, channel)
 
+    #Handle additional checks required when a player joins the game.
+    async def add_player(self, session, user):
+        session.add_player(user)
+        if session.message_board != None:
+            msg = self.generate_board_message(session)
+            await session.message_board.edit(content=msg)
+
     #Handle additional checks required when a player quits the game.
     async def remove_player(self, session, user):
         session.remove_player(user)
