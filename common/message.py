@@ -21,6 +21,8 @@
 # some standard responses to in the future.
 #===============================================================================
 
+from common.emoji import string_to_emoji
+
 def create_winner_message(winner):
     winner_message = ":clap::regional_indicator_h::regional_indicator_a::regional_indicator_s::regional_indicator_w::regional_indicator_o::regional_indicator_n::regional_indicator_t::regional_indicator_h::regional_indicator_e::regional_indicator_g::regional_indicator_a::regional_indicator_m::regional_indicator_e::clap:"
     audience = ":clap::clap::clap::clap::clap::clap::clap::clap::clap::clap::clap::clap::clap::clap::clap:"
