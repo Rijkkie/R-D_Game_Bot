@@ -31,6 +31,9 @@ class DatabaseEventsCog(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         dbfunctions.update_guild(guild)
+        for user in self.client.users:
+            if not user.bot:
+                dbfunctions.update_user(user)
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
