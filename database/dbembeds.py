@@ -9,21 +9,50 @@ def balance(user, money, rank):
     return embed
 
 
-def stats(user, user_stats, ranks, total_stats, total_rank):  # MAKE TOTAL wins/score/rank. Leaderboard.
+def stats(user, user_stats, ranks, total_stats, total_rank):
     width = 12
     t1 = """
-```glsl
-   game      w/l/d      score      rank
-   
+```css
+Game         w/l/d     Score    Rank
 """
     t2 = ""
     t3 = f"""
-Total:       {total_stats[0][1]}/{total_stats[0][2]}/{total_stats[0][3]} {total_stats[0][4]:{width-3}}        #{total_rank}
+{"Total:":{width}} {str(total_stats[0][1])+'/'+str(total_stats[0][2])+'/'+str(total_stats[0][3]):{width-6}} {total_stats[0][4]:{width-4}}     #{total_rank}
 
 Boardgames played: {total_stats[0][1] + total_stats[0][2] + total_stats[0][3]}
 ```"""
     for i in range(len(user_stats)):
-        t2 += f"{user_stats[i][0]:{width}} {user_stats[i][2]}/{user_stats[i][3]}/{user_stats[i][4]} {user_stats[i][5]:{width-3}}        #{ranks[i]}\n"
+        t2 += f"{user_stats[i][0]:{width}} {str(user_stats[i][2])+'/'+str(user_stats[i][3])+'/'+str(user_stats[i][4]):{width-6}} {user_stats[i][5]:{width-4}}     #{ranks[i]}\n"
     embed = discord.Embed(title=" ", description="```       Personal Boardgame Stats```" + t1 + t2 + t3)
     embed.set_author(name=f"{user.name}#{user.discriminator}", icon_url=user.avatar_url)
+    return embed
+
+
+def top_balance(top, ranks, page):
+    width = 4
+    t1 = f"""
+```css
+{"Rank":{width}} {"Balance":{width+5}} Name
+"""
+    t2 = ""
+    t3 = "```"
+    for i in range(len(top)):
+        t2 += f" {'#'+str(ranks[i]):{width}} {top[i][1]:{width+2}}   {top[i][0] + '#' + str(top[i][4])}\n"
+    embed = discord.Embed(title=" ", description="```Global balance leaderboard```" + t1 + t2 + t3)
+    embed.set_footer(text=f"page {page}/{round(top[0][2] / 10 + .5)}")
+    return embed
+
+
+def top_boardgame(top, ranks, page):
+    width = 3
+    t1 = f"""
+```css
+{"Rank":{width+5}} {"score":{width+3}} {"w/l/d":{width+4}} User
+"""
+    t2 = ""
+    t3 = "```"
+    for i in range(len(top)):
+        t2 += f" {'#'+str(ranks[i]):{width}} {top[i][6]:{width+6}}  {str(top[i][3])+'/'+str(top[i][4])+'/'+str(top[i][5]):{width+4}} {top[i][1]+'#'+str(top[i][2])}\n"
+    embed = discord.Embed(title=" ", description="```Global stats leaderboard```" + t1 + t2 + t3)
+    embed.set_footer(text=f"page {page}/{round(top[0][7] / 10 + .5)}")
     return embed

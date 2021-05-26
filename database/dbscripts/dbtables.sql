@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `user`
 (
  `id`            bigint unsigned NOT NULL ,
  `name`          varchar(255) DEFAULT NULL ,
- `discriminator` int zerofill DEFAULT NULL ,
+ `discriminator` varchar(4) DEFAULT NULL ,
  `joined_at`     datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ,
  `updated_at`    datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

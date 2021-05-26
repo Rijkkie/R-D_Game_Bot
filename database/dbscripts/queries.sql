@@ -43,3 +43,17 @@ WHERE score > (
    FROM total_boardgame_stats
    WHERE user_id = %s
 );
+
+SELECT name, money, users, user_id, discriminator
+FROM user, balance, (SELECT count(*) as users FROM balance) as users
+WHERE user.id = balance.user_id
+ORDER BY money DESC
+LIMIT 10
+OFFSET %s;
+
+SELECT user_id, name, discriminator, wins, losses, draws, score, users
+FROM user, total_boardgame_stats, (SELECT count(*) as users FROM total_boardgame_stats) as users
+WHERE user.id = total_boardgame_stats.user_id
+ORDER BY score DESC
+LIMIT 10
+OFFSET %s;
