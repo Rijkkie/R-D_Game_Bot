@@ -39,6 +39,7 @@ from common.session import Session
 from common.player import Player
 from common.game import Game
 from common.emoji import number_to_emoji, emoji_to_number
+from database import dbfunctions
 
 import random
 
@@ -105,31 +106,6 @@ class TictactoeCog(Game):
     def get_max_players(self, session):
         return 2
 
-    #Generate game board message.
-    def generate_board_message(self, session):
-        msg = f"**Tic-tac-toe Room {session.room_id}**\n"
-        msg += f"❌: {session.players[0].user.mention}\n"
-        msg += f"⭕: {session.players[1].user.mention}\n"
-        for column, tile in enumerate(session.board_state):
-            if column % 3 == 0:
-                msg += "\n"
-            if tile == "x":
-                msg += "❌"
-                continue
-            if tile == "o":
-                msg += "⭕"
-                continue
-            msg += number_to_emoji(column+1)
-        if self.is_game_tied(session.board_state) == True:
-            msg += "\n\nThe game has ended in a tie!"
-            return msg
-        msg += f"\n\n{session.players[session.player_turn].user.mention}"
-        if self.is_game_won(session.board_state) == True:
-            msg += " has won the game!"
-            return msg
-        msg += "'s turn!"
-        return msg
-
     #Check board state for a winning position.
     def is_game_won(self, board_state):
         for i in range(3):
@@ -153,6 +129,38 @@ class TictactoeCog(Game):
             if board_state[i] != "x" and board_state[i] != "o":
                 return False
         return self.is_game_won(board_state) == False
+
+    #Generate game board message.
+    def generate_board_message(self, session):
+        msg = f"**Tic-tac-toe Room {session.room_id}**\n"
+        msg += f"❌: {session.players[0].user.mention}\n"
+        msg += f"⭕: {session.players[1].user.mention}\n"
+        for column, tile in enumerate(session.board_state):
+            if column % 3 == 0:
+                msg += "\n"
+            if tile == "x":
+                msg += "❌"
+                continue
+            if tile == "o":
+                msg += "⭕"
+                continue
+            msg += number_to_emoji(column+1)
+        if self.is_game_tied(session.board_state) == True:
+            dbfunctions.boardgame_action("TicTacToe", session.players[1].user.id, session.message_board.guild.id, 'd')
+            dbfunctions.boardgame_action("TicTacToe", session.players[0].user.id, session.message_board.guild.id, 'd')
+            msg += "\n\nThe game has ended in a tie!"
+            return msg
+        msg += f"\n\n{session.players[session.player_turn].user.mention}"
+        if self.is_game_won(session.board_state) == True:
+            dbfunctions.boardgame_action("TicTacToe", session.players[session.player_turn].user.id, session.message_board.guild.id, 'w')
+            if session.player_turn == 0:
+                dbfunctions.boardgame_action("TicTacToe", session.players[1].user.id, session.message_board.guild.id, 'l')
+            else:
+                dbfunctions.boardgame_action("TicTacToe", session.players[0].user.id, session.message_board.guild.id, 'l')
+            msg += " has won the game!"
+            return msg
+        msg += "'s turn!"
+        return msg
 
     #Place token in tile, check for winner, edit message and clear reaction.
     async def process_turn(self, session, tile, reaction):
