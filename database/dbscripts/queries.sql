@@ -12,17 +12,9 @@ VALUES (%s, %s, %s);
 INSERT INTO boardgame_action(game, user_id, guild_id, wld)
 VALUES (%s, %s, %s, %s);
 
-SELECT money FROM balance WHERE user_id = %s;
+SELECT money, ranks FROM balance WHERE user_id = %s;
 
 SELECT * FROM stats WHERE user_id = %s;
-
-SELECT count(*)
-FROM (SELECT DISTINCT money from balance) as money
-WHERE money > (
-   SELECT money
-   FROM balance
-   WHERE user_id = %s
-);
 
 SELECT count(*)
 FROM (SELECT DISTINCT score from (SELECT * FROM stats WHERE game like %(game)s) as g) as score
@@ -36,22 +28,18 @@ SELECT *
 FROM total_boardgame_stats
 WHERE user_id = %s;
 
-SELECT count(*)
-FROM (SELECT DISTINCT score FROM total_boardgame_stats) as score
-WHERE score > (
-   SELECT score
-   FROM total_boardgame_stats
-   WHERE user_id = %s
-);
+SELECT ranks
+FROM total_boardgame_stats
+WHERE user_id = %s;
 
-SELECT name, money, users, user_id, discriminator
+SELECT name, money, users, user_id, discriminator, ranks
 FROM user, balance, (SELECT count(*) as users FROM balance) as users
 WHERE user.id = balance.user_id
 ORDER BY money DESC
 LIMIT 10
 OFFSET %s;
 
-SELECT user_id, name, discriminator, wins, losses, draws, score, users
+SELECT user_id, name, discriminator, wins, losses, draws, score, users, ranks
 FROM user, total_boardgame_stats, (SELECT count(*) as users FROM total_boardgame_stats) as users
 WHERE user.id = total_boardgame_stats.user_id
 ORDER BY score DESC
