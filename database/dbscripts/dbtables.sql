@@ -105,7 +105,9 @@ AND wins.game = losses.game
 AND losses.game = draws.game;
 
 CREATE VIEW `balance` AS
-SELECT user_id, sum(amount) + 1000 as money
+SELECT *, rank() over (ORDER BY money DESC) as ranks
+FROM
+(SELECT user_id, sum(amount) + 1000 as money
 FROM transaction
 GROUP BY user_id
 UNION
@@ -114,9 +116,11 @@ FROM user
 WHERE not exists(
    SELECT *
    FROM transaction
-   WHERE transaction.user_id = user.id);
+   WHERE transaction.user_id = user.id)) as balance;
 
 CREATE VIEW `total_boardgame_stats` as
-SELECT user_id, sum(wins) as wins, sum(losses) as losses, sum(draws) as draws, sum(score) as score
+SELECT *, rank() over (ORDER BY score DESC) as ranks
+FROM
+(SELECT user_id, sum(wins) as wins, sum(losses) as losses, sum(draws) as draws, sum(score) as score
 FROM stats
-GROUP BY user_id;
+GROUP BY user_id) as total_boardgame_stats;

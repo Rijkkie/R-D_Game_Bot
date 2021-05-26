@@ -53,8 +53,7 @@ class DatabaseEventsCog(commands.Cog):
         # Updates the user, retrieves the balance and rank and then sends an embed.
         dbfunctions.update_user(user)
         balance = dbfunctions.get_balance(user.id)
-        rank = dbfunctions.balance_rank(user.id)
-        await ctx.send(embed=dbembeds.balance(user, balance, rank))
+        await ctx.send(embed=dbembeds.balance(user, balance))
 
 
     @commands.command()
@@ -69,7 +68,7 @@ class DatabaseEventsCog(commands.Cog):
         # Updates the user in the database and retrieves the user's stats.
         dbfunctions.update_user(user)
         stats = dbfunctions.get_stats(user.id)
-        # Retrieves all the user's ranks from all the games
+        # Retrieves all the user's ranks from every game.
         ranks = []
         for i in range(len(stats)):
             ranks.append(dbfunctions.stats_rank(stats[i][0], user.id))
@@ -88,16 +87,11 @@ class DatabaseEventsCog(commands.Cog):
             await ctx.send("Try a valid page number!")
             return
         # Retrieves the top balance data from the page in the database. Checks for invalid pages.
-        # Calculates the ranks respectively from each user where same ranks are possible and then an embed is sent.
         top = dbfunctions.top_balance(offset)
         if not top:
             await ctx.send("Try a valid page number!")
             return
-        elif offset > 0:
-            ranks = top_ranks(top, dbfunctions.balance_rank(top[0][3]))
-        else:
-            ranks = top_ranks(top, 1)
-        await ctx.send(embed=dbembeds.top_balance(top, ranks, page))
+        await ctx.send(embed=dbembeds.top_balance(top, page))
 
 
     @commands.command(aliases=['topstats', 'topboardgame', 'topscore'])
@@ -112,12 +106,7 @@ class DatabaseEventsCog(commands.Cog):
         if not top:
             await ctx.send("Try a valid page number!")
             return
-        # Calculates the ranks respectively from each user where same ranks are possible and then an embed is sent.
-        elif offset > 0:
-            ranks = top_ranks(top, dbfunctions.total_boardgame_rank(top[0][0]))
-        else:
-            ranks = top_ranks(top, 1)
-        await ctx.send(embed=dbembeds.top_boardgame(top, ranks, page))
+        await ctx.send(embed=dbembeds.top_boardgame(top, page))
 
 
     # For the other games maybe, blackjack, hangman, etc. which sums up all the scores and not just boardgames.
@@ -133,17 +122,6 @@ class DatabaseEventsCog(commands.Cog):
             await self.balance(ctx)
             return
         raise error
-
-
-def top_ranks(top, topmost_rank):
-    # Gives the ranks respectively from each user's balance where same rank placing is possible.
-    ranks = [topmost_rank]
-    for i in range(1, len(top)):
-        if top[i - 1][1] == top[i][1]:
-            ranks.append(ranks[i - 1])
-        else:
-            ranks.append(ranks[i - 1] + 1)
-    return ranks
 
 
 def setup(client):
