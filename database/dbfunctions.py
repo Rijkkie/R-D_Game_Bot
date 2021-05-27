@@ -79,12 +79,16 @@ def top_boardgame(offset):
     return retrieve_query(sqlQueries[10], (offset,))
 
 
-def retrieve_query(query, values):
+def retrieve_query(query, values):  # Add check if connection still exists.
+    if not cnx.is_connected():
+        cnx.reconnect()
     cursor.execute(query, values)
     retrieved_data = cursor.fetchall()
     return retrieved_data
 
 
 def execute_query(query, values):
+    if not cnx.is_connected():
+        cnx.reconnect()
     cursor.execute(query, values)
     cnx.commit()
