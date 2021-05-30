@@ -11,7 +11,7 @@
 #===============================================================================
 # Notes
 # ..............................................................................
-# - TODO ACTUALLY ADD DATABASE SUPPORT. -YJ
+# - Add database support. -YJ
 # - Add the option for a player to set the secret word (as "executioner"). -YJ
 #===============================================================================
 # Description
