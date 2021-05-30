@@ -1,14 +1,17 @@
 #===============================================================================
 # Hangman v1.0
-# - Last Updated: 24 May 2021
+# - Last Updated: 30 May 2021
 #===============================================================================
 # Update History
 # ..............................................................................
-# 25 May 2021 - Finished file.
-# 24 May 2021 - Started file.
+# 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
+#               join(), which allows for better specialization. -YJ
+# 25 May 2021 - Finished file. -YJ
+# 24 May 2021 - Started file. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
+# - TODO ACTUALLY ADD DATABASE SUPPORT. -YJ
 # - Add the option for a player to set the secret word (as "executioner"). -YJ
 #===============================================================================
 # Description
@@ -168,6 +171,7 @@ class HangmanCog(Game):
             if i:
                 msg += ", "
             msg += f"{player.user.mention}"
+        msg += "\n"
         #Line: Instructions
         msg += f"Guess by typing `!hm guess Y {session.room_id}`, replacing Y with your guess."
         msg += "\n\n```"
@@ -427,10 +431,10 @@ class HangmanCog(Game):
             return
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
-            if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
+            if session.message_join != None and reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
                 ctx = await self.client.get_context(reaction.message)
-                await Game.join(self, ctx, session.room_id, Player(user))
-                return
+                ctx.author = user
+                await self.join(ctx, session.room_id)
 
 #Client Setup
 def setup(client):
