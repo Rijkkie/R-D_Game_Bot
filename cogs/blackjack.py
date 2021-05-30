@@ -1,16 +1,18 @@
 #===============================================================================
 # Blackjack v1.1
-# - Last Updated: 23 May 2021
+# - Last Updated: 30 May 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
+#               join(), which allows for better specialization. -YJ
 # 23 May 2021 - All classes now extend a base class. -YJ
 # 19 May 2021 - Finished file. -YJ
 # 12 May 2021 - Started file. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
-#
+# - TODO ACTUALLY ADD DATABASE SUPPORT. -YJ
 #===============================================================================
 # Description
 # ..............................................................................
@@ -219,15 +221,15 @@ class BlackjackCog(Game):
             if session.betting_active == True:
                 msg += "Place your bets!\n"
                 msg += f"Bet by typing `!bj bet YY {session.room_id}`, replacing YY with the amount.\n"
-                msg += "Confirm bet: ⏹.\n\n"
+                msg += "⏹ - Confirm bet.\n\n"
             elif len(session.dealer.hand) == 1:
                 msg += "Hit or stand?\n"
-                msg += "Hit: 🔼.\n"
-                msg += "Stand: ⏹.\n"
-                msg += "Double down: ⏬.\n\n"
+                msg += "🔼 - Hit.\n"
+                msg += "⏹ - Stand.\n"
+                msg += "⏬ - Double down.\n\n"
             else:
                 msg += "Results!\n"
-                msg += "Continue: ⏹.\n\n"
+                msg += "⏹ - Continue.\n\n"
             if session.betting_active == False:
                 msg += "Dealer: "
                 for card in session.dealer.hand:
@@ -484,9 +486,10 @@ class BlackjackCog(Game):
             return
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
-            if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
+            if session.message_join != None and reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
                 ctx = await self.client.get_context(reaction.message)
-                await Game.join(self, ctx, session.room_id, BlackjackPlayer(user))
+                ctx.author = user
+                await self.join(ctx, session.room_id)
                 return
 
             #Taking turn by reacting with emoji
