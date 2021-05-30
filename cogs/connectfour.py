@@ -1,9 +1,12 @@
 #===============================================================================
-# Connect Four v1.1
-# - Last Updated: 24 May 2021
+# Connect Four v2.0
+# - Last Updated: 30 May 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
+#               join(), which allows for better specialization; Added database
+#               support. -YJ
 # 24 May 2021 - Renamed fourOnARow.py to connectfour.py and class fourOnARow to
 #               ConnectFour to match Python naming convention; Rewrote file a
 #               considerable amount to match common functions/classes; Removed
@@ -17,6 +20,8 @@
 #===============================================================================
 # Notes
 # ..............................................................................
+# - Make the game able to have different board sizes, different color styles-
+#  (its now made for darkmode) -RK
 #===============================================================================
 # Description
 # ..............................................................................
@@ -34,15 +39,14 @@ from common.session import Session
 from common.player import Player
 from common.game import Game
 from common.emoji import number_to_emoji, emoji_to_number
-from common.message import create_winner_message
 
 import random
 
 #Session Setup
 class ConnectFourSession(Session):
     #Define variables.
-    def __init__(self, room_id: str):
-        Session.__init__(self, room_id)
+    def __init__(self, game_sessions):
+        Session.__init__(self, game_sessions)
         self.__player_turn = 0
         self.__message_board = None
         self.__board_state = [["0","0","0","0","0","0","0"],
@@ -81,7 +85,6 @@ class ConnectFourCog(Game):
     #Define variables.
     def __init__(self, client):
         Game.__init__(self, client)
-        self.all_numbers = ["0️⃣","1️⃣","2️⃣","3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
         self.instant_start = True
         self.game_name = "Connect Four"
         self.game_abbrev = "c4"
@@ -190,6 +193,17 @@ class ConnectFourCog(Game):
                 break
         #If game is won or tied.
         if self.is_game_won(session.board_state) == True or self.is_game_tied(session.board_state) == True:
+            #Add result to database
+            if self.is_game_won(session.board_state) == True:
+                for i, player in enumerate(session.players):
+                    if i == session.player_turn:
+                        dbfunctions.boardgame_action("Connect Four", player.user.id, session.message_board.guild.id, 'w')
+                    else:
+                        dbfunctions.boardgame_action("Connect Four", player.user.id, session.message_board.guild.id, 'l')
+            else:
+                for player in enumerate(session.players):
+                    dbfunctions.boardgame_action("Connect Four", player.user.id, session.message_board.guild.id, 'd')
+            #End session
             msg = self.generate_board_message(session)
             await reaction.message.edit(content=msg)
             await reaction.message.clear_reactions()
@@ -260,9 +274,10 @@ class ConnectFourCog(Game):
             return
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
-            if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
+            if session.message_join != None and reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
                 ctx = await self.client.get_context(reaction.message)
-                await Game.join(self, ctx, session.room_id, Player(user))
+                ctx.author = user
+                await self.join(ctx, session.room_id)
                 return
 
             #Taking turn by reacting with number emoji
