@@ -1,9 +1,12 @@
 #===============================================================================
 # Tic-tac-toe v1.3
-# - Last Updated: 24 May 2021
+# - Last Updated: 30 May 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
+#               join(), which allows for better specialization; Added database
+#               support. -YJ
 # 24 May 2021 - All classes now extend a base class; max_players is a function
 #               again, this time for class flexibility instead of var memory;
 #               Fixed a bug that would identify a full board as a tie even if
@@ -21,7 +24,7 @@
 #===============================================================================
 # Notes
 # ..............................................................................
-#
+# 
 #===============================================================================
 # Description
 # ..............................................................................
@@ -39,6 +42,7 @@ from common.session import Session
 from common.player import Player
 from common.game import Game
 from common.emoji import number_to_emoji, emoji_to_number
+
 from database import dbfunctions
 
 import random
@@ -46,8 +50,8 @@ import random
 #Session Setup
 class TictactoeSession(Session):
     #Define variables.
-    def __init__(self, room_id: str):
-        Session.__init__(self, room_id)
+    def __init__(self, game_sessions):
+        Session.__init__(self, game_sessions)
         self.__player_turn = 0
         self.__board_state = "123456789"
         self.__message_board = None
@@ -146,17 +150,10 @@ class TictactoeCog(Game):
                 continue
             msg += number_to_emoji(column+1)
         if self.is_game_tied(session.board_state) == True:
-            dbfunctions.boardgame_action("TicTacToe", session.players[1].user.id, session.message_board.guild.id, 'd')
-            dbfunctions.boardgame_action("TicTacToe", session.players[0].user.id, session.message_board.guild.id, 'd')
             msg += "\n\nThe game has ended in a tie!"
             return msg
         msg += f"\n\n{session.players[session.player_turn].user.mention}"
         if self.is_game_won(session.board_state) == True:
-            dbfunctions.boardgame_action("TicTacToe", session.players[session.player_turn].user.id, session.message_board.guild.id, 'w')
-            if session.player_turn == 0:
-                dbfunctions.boardgame_action("TicTacToe", session.players[1].user.id, session.message_board.guild.id, 'l')
-            else:
-                dbfunctions.boardgame_action("TicTacToe", session.players[0].user.id, session.message_board.guild.id, 'l')
             msg += " has won the game!"
             return msg
         msg += "'s turn!"
@@ -172,6 +169,17 @@ class TictactoeCog(Game):
         session.board_state = board[:tile-1] + token + board[tile:]
         #If game is won or tied.
         if self.is_game_won(session.board_state) == True or self.is_game_tied(session.board_state) == True:
+            #Add result to database
+            if self.is_game_won(session.board_state) == True:
+                for i, player in enumerate(session.players):
+                    if i == session.player_turn:
+                        dbfunctions.boardgame_action("TicTacToe", player.user.id, session.message_board.guild.id, 'w')
+                    else:
+                        dbfunctions.boardgame_action("TicTacToe", player.user.id, session.message_board.guild.id, 'l')
+            else:
+                for player in enumerate(session.players):
+                    dbfunctions.boardgame_action("TicTacToe", player.user.id, session.message_board.guild.id, 'd')
+            #End session
             msg = self.generate_board_message(session)
             await reaction.message.edit(content=msg)
             await reaction.message.clear_reactions()
@@ -243,9 +251,10 @@ class TictactoeCog(Game):
             return
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
-            if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
+            if session.message_join != None and reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
                 ctx = await self.client.get_context(reaction.message)
-                await Game.join(self, ctx, session.room_id, Player(user))
+                ctx.author = user
+                await self.join(ctx, session.room_id)
                 return
 
             #Taking turn by reacting with number emoji
