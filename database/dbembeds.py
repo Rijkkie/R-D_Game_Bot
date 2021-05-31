@@ -9,7 +9,7 @@ def balance(user, money):
     return embed
 
 
-def stats(user, user_stats, ranks, total_stats, total_rank):
+def stats(user, user_stats, ranks, total_stats):
     width = 12
     t1 = """
 ```css
@@ -17,7 +17,7 @@ Game         w/l/d     Score    Rank
 """
     t2 = ""
     t3 = f"""
-{"Total:":{width}} {str(total_stats[0][1])+'/'+str(total_stats[0][2])+'/'+str(total_stats[0][3]):{width-6}} {total_stats[0][4]:{width-4}}     #{total_rank}
+{"Total:":{width}} {str(total_stats[0][1])+'/'+str(total_stats[0][2])+'/'+str(total_stats[0][3]):{width-6}} {total_stats[0][4]:{width-4}}     #{total_stats[0][5]}
 
 Boardgames played: {total_stats[0][1] + total_stats[0][2] + total_stats[0][3]}
 ```"""
