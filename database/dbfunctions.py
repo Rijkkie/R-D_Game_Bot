@@ -23,8 +23,6 @@ cursor = cnx.cursor()
 def db_startup():
     sql_file = open('database/dbscripts/dbtables.sql', 'r')
     sql_queries = sql_file.read().split(';')
-    cursor.execute("CREATE SCHEMA IF NOT EXISTS `" + config["database_name"] + "`")
-    cursor.execute("USE " + config["database_name"])
     for query in sql_queries:
         cursor.execute(query)
     cnx.commit()
