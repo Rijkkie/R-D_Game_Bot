@@ -4,7 +4,7 @@
   "mysql": {
     "user": "",
     "password": "",
-    "host": "localhost"
-  },
-  "database_name": ""
+    "host": "localhost",
+    "database": ""
+  }
 }
