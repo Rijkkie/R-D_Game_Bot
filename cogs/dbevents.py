@@ -11,6 +11,8 @@ class DatabaseEventsCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # Creates the database/tables if they did not exist already.
+        dbfunctions.db_startup()
         # On startup, puts all the guilds and users who aren't bots in the database.
         for guild in self.client.guilds:
             dbfunctions.update_guild(guild)
@@ -72,10 +74,13 @@ class DatabaseEventsCog(commands.Cog):
         ranks = []
         for i in range(len(stats)):
             ranks.append(dbfunctions.stats_rank(stats[i][0], user.id))
-        # Retrieves the sum of the stats and score rank and uses all the retrieved/calculated data to send an embed.
+        # Retrieves the sum of the stats and score rank needed for the embed.
         total_stats = dbfunctions.total_boardgame_stats(user.id)
-        total_rank = dbfunctions.total_boardgame_rank(user.id)
-        await ctx.send(embed=dbembeds.stats(user, stats, ranks, total_stats, total_rank))
+        # Checks if total_stats is not None, which might be because there are no games in the database yet.
+        if not total_stats:
+            await ctx.send("No boardgames have been played yet! Play a game first!")
+            return
+        await ctx.send(embed=dbembeds.stats(user, stats, ranks, total_stats))
 
 
     # Add per server? Same with stats
@@ -104,7 +109,7 @@ class DatabaseEventsCog(commands.Cog):
         # Retrieves the top stats data from the page in the database. Checks for invalid pages.
         top = dbfunctions.top_boardgame(offset)
         if not top:
-            await ctx.send("Try a valid page number!")
+            await ctx.send("An invalid page number has been given or no games have been played yet!")
             return
         await ctx.send(embed=dbembeds.top_boardgame(top, page))
 
