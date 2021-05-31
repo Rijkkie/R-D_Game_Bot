@@ -1,9 +1,3 @@
---#mysqldump -u root -p database_name > test.sql
-
---wise to make the user themselves create their own schema
---CREATE SCHEMA gamebot_test;
---USE gamebot_test;
-
 CREATE TABLE IF NOT EXISTS `user`
 (
  `id`            bigint unsigned NOT NULL ,
@@ -61,7 +55,7 @@ KEY `fkIdx_89` (`user_id`),
 CONSTRAINT `FK_88` FOREIGN KEY `fkIdx_89` (`user_id`) REFERENCES `user` (`id`)
 );
 
-CREATE VIEW `stats` AS
+CREATE OR REPLACE VIEW `stats` AS
 SELECT wins.game, wins.user_id, wins, losses, draws,  wins * 100 + losses * 10 + draws * 50 as score
 FROM
     (SELECT a1.game, a1.user_id, count(*) as wins
@@ -104,7 +98,7 @@ AND losses.user_id = draws.user_id
 AND wins.game = losses.game
 AND losses.game = draws.game;
 
-CREATE VIEW `balance` AS
+CREATE OR REPLACE VIEW `balance` AS
 SELECT *, rank() over (ORDER BY money DESC) as ranks
 FROM
 (SELECT user_id, sum(amount) + 1000 as money
@@ -118,7 +112,7 @@ WHERE not exists(
    FROM transaction
    WHERE transaction.user_id = user.id)) as balance;
 
-CREATE VIEW `total_boardgame_stats` as
+CREATE OR REPLACE VIEW `total_boardgame_stats` as
 SELECT *, rank() over (ORDER BY score DESC) as ranks
 FROM
 (SELECT user_id, sum(wins) as wins, sum(losses) as losses, sum(draws) as draws, sum(score) as score
