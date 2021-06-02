@@ -1,18 +1,17 @@
 #===============================================================================
-# Session v1.0
-# - Last Updated: 22 May 2021
+# Session v1.1
+# - Last Updated: 02 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
-# 22 May 2021 - =Split generate_room_id from common.py; Added Session class.
-#               -YJ
+# 02 Jun 2021 - Added inactivity timer to sessions; Class saves parent class
+#               now, primarily to be able to call timeout_session. -YJ
+# 22 May 2021 - Split generate_room_id from common.py; Added Session class. -YJ
 # 18 Apr 2021 - Started and finished common.py; Added generate_room_id. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
-# - Add an expiry timer on that room ID or something, to prevent users from just
-#   starting a bunch of empty rooms and hogging all the IDs. -YJ
-# - A lot more room stuff could be made into common code. -YJ
+#
 #===============================================================================
 # Description
 # ..............................................................................
@@ -22,7 +21,10 @@
 
 #Import Modules
 from discord import Message, User
+from discord.ext import tasks
+
 from common.player import Player
+
 import random
 
 #Generate Room ID
@@ -46,10 +48,12 @@ def generate_room_id(game_sessions):
 #The class generates a room_id upon creation.
 class Session:
     #Define variables.
-    def __init__(self, game_sessions):
-        self.__room_id = generate_room_id(game_sessions)
+    def __init__(self, parent):
+        self.__parent = parent
+        self.__room_id = generate_room_id(parent.game_sessions)
         self.__players = []
         self.__message_join = None
+        self.inactivity_timer.start()
 
     @property
     def room_id(self):
@@ -81,3 +85,18 @@ class Session:
     #Shuffle players.
     def shuffle_players(self):
         random.shuffle(self.__players)
+
+    #Inactivity timer.
+    @tasks.loop(minutes=10.0, count=2)
+    async def inactivity_timer(self):
+        if self.inactivity_timer.current_loop != 0:
+            await self.__parent.timeout_session(self)
+
+    def inactivity_timer_restart(self):
+        self.inactivity_timer.restart()
+
+    def inactivity_timer_change_interval(self, interval):
+        self.inactivity_timer.change_interval(minutes=interval)
+
+    def inactivity_timer_cancel(self):
+        self.inactivity_timer.cancel()

@@ -1,9 +1,10 @@
 #===============================================================================
-# Tic-tac-toe v1.3
-# - Last Updated: 30 May 2021
+# Tic-tac-toe v1.4
+# - Last Updated: 02 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 02 Jun 2021 - Added support for inactivity timer of sessions. -YJ
 # 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
 #               join(), which allows for better specialization; Added database
 #               support. -YJ
@@ -24,7 +25,7 @@
 #===============================================================================
 # Notes
 # ..............................................................................
-# 
+#
 #===============================================================================
 # Description
 # ..............................................................................
@@ -50,8 +51,8 @@ import random
 #Session Setup
 class TictactoeSession(Session):
     #Define variables.
-    def __init__(self, game_sessions):
-        Session.__init__(self, game_sessions)
+    def __init__(self, parent):
+        Session.__init__(self, parent)
         self.__player_turn = 0
         self.__board_state = "123456789"
         self.__message_board = None
@@ -110,6 +111,14 @@ class TictactoeCog(Game):
     def get_max_players(self, session):
         return 2
 
+    #Remove session on inactivity timeout.
+    async def timeout_session(self, session):
+        if session.message_board != None:
+            msg = f"{self.game_name} room {session.room_id} has timed out due to inactivity."
+            await session.message_board.edit(content=msg)
+            await session.message_board.clear_reactions()
+        await Game.timeout_session(self, session)
+
     #Check board state for a winning position.
     def is_game_won(self, board_state):
         for i in range(3):
@@ -161,6 +170,7 @@ class TictactoeCog(Game):
 
     #Place token in tile, check for winner, edit message and clear reaction.
     async def process_turn(self, session, tile, reaction):
+        session.inactivity_timer_restart()
         #Identify token and place it.
         token = "x"
         if session.player_turn == 1:
@@ -193,6 +203,8 @@ class TictactoeCog(Game):
 
     #Generate and send first message.
     async def setup_game(self, session, channel):
+        await Game.setup_game(self, session, channel)
+        session.inactivity_timer_restart()
         session.shuffle_players()
         msg = self.generate_board_message(session)
         board_message = await channel.send(msg)
@@ -228,7 +240,7 @@ class TictactoeCog(Game):
     #Register a new game room.
     @tictactoe.command(aliases=["start", "begin", "create", "register", "host"])
     async def new(self, ctx):
-        session = TictactoeSession(self.game_sessions)
+        session = TictactoeSession(self)
         player = Player(ctx.author)
         await Game.new(self, ctx, session, player)
 

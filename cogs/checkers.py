@@ -1,9 +1,10 @@
 #===============================================================================
-# Checkers v1.1
-# - Last Updated: 26 May 2021
+# Checkers v1.2
+# - Last Updated: 02 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 02 Jun 2021 - Added support for inactivity timer of sessions. -YJ
 # 26 May 2021 - Hastily rewrote some code to make parts of it extend base
 #               classes. -YJ
 # 22 May 2021 - File finished by RK. -YJ
@@ -40,8 +41,8 @@ from abc import ABC, abstractmethod
 
 #Checkers Session
 class CheckersSession(Session):
-    def __init__(self, game_sessions):
-        Session.__init__(self, game_sessions)
+    def __init__(self, parent):
+        Session.__init__(self, parent)
         self.__message_board = None
 
     @property
@@ -187,6 +188,7 @@ class CheckersCog(Game):
 
     #Setup the initial variables and message.
     async def setup_game(self, session, channel):
+        await Game.setup_game(self, session, channel)
         session.shuffle_players()
         self.player1 = session.players[0]
         self.player2 = session.players[1]
@@ -235,7 +237,7 @@ class CheckersCog(Game):
     #Register a new game room.
     @checkers.command(aliases=["start", "begin", "create", "register", "host"])
     async def new(self, ctx):
-        session = CheckersSession(self.game_sessions)
+        session = CheckersSession(self)
         player = Player(ctx.author)
         await Game.new(self, ctx, session, player)
 
@@ -259,11 +261,11 @@ class CheckersCog(Game):
             return
         for session in self.game_sessions:
             #Joining game by reacting with play emoji
-            if reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
+            if session.message_join != None and reaction.message.id == session.message_join.id and reaction.emoji == "▶️":
                 ctx = await self.client.get_context(reaction.message)
-                await Game.join(self, ctx, session.room_id, BlackjackPlayer(user))
+                await Game.join(self, ctx, session.room_id, Player(user))
                 return
-            
+
         game_board = reaction.message
         player_id = user.id
         #Check if a reaction was posted to the message with the board
@@ -272,7 +274,7 @@ class CheckersCog(Game):
             new_reaction = copy(reaction.emoji)
             if session.message_board != None and user != session.message_board.author and reaction.emoji in self.all_reactions:
                 await game_board.remove_reaction(reaction.emoji,user)
-            if player_id == session.players[0].user.id and game_board.id == session.message_board.id:
+            if session.message_board != None and player_id == session.players[0].user.id and game_board.id == session.message_board.id:
                 if new_reaction in self.emojis_on_board(self.board):
                     new_pos = self.number_to_coordinate(self.board,emoji_to_number(new_reaction))
                     if not self.strikes: #other player has turn
@@ -341,6 +343,7 @@ class CheckersCog(Game):
                     msg = self.board_to_msg(self.board,self.value,Empty([-1,-1]))
                     winner = session.players[1].user
                     msg += create_winner_message(winner.name)
+                session.inactivity_timer_restart()
                 await game_board.edit(content=msg)
 
 

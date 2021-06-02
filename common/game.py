@@ -1,17 +1,19 @@
 #===============================================================================
-# Game v1.0
-# - Last Updated: 23 May 2021
+# Game v1.1
+# - Last Updated: 02 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 02 Jun 2021 - Added support for inactivity timer of sessions. -YJ
 # 25 May 2021 - Added add_player to support checks on player join. -YJ
 # 23 May 2021 - Started and finished file. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
+# - Make it possible to opt into a new match in the same room after a game. -YJ
 # - It's kind of a pain to have to specify the room_id for every command. Check
 #   if a player is in just one room, and if they are, assume they are using a
-#   command for that room specifically.
+#   command for that room specifically. -YJ
 # - Quite a bit of code duplication between set_max_players and set_max_rounds.
 #   Figure out how to generalize them. -YJ
 #===============================================================================
@@ -23,15 +25,7 @@
 
 #Import Modules
 import discord
-from discord import Message, User
 from discord.ext import commands
-
-from common.session import Session
-from common.player import Player
-from common.card import Card
-
-import random
-import math
 
 #Cog Class
 class Game(commands.Cog):
@@ -55,16 +49,25 @@ class Game(commands.Cog):
         return False
 
     #Setup the initial variables and message(s) of the game. Override if needed.
-    async def setup_game(self):
-        pass
+    async def setup_game(self, session, channel):
+        session.inactivity_timer_change_interval(60.0)
 
     #Handle additional checks required when a player joins the game. Override if needed.
     async def add_player(self, session, user):
+        session.inactivity_timer_restart()
         session.add_player(user)
 
     #Handle additional checks required when a player quits the game. Override if needed.
     async def remove_player(self, session, user):
         session.remove_player(user)
+
+    #Remove session on inactivity timeout. Override if needed.
+    async def timeout_session(self, session):
+        if session.message_join != None:
+            msg = f"{self.game_name} room {session.room_id} has timed out due to inactivity."
+            await session.message_join.edit(content=msg)
+            await session.message_join.clear_reactions()
+        self.game_sessions.remove(session)
 
     #Return the names of users in a game room.
     async def player_list(self, ctx, room_id):
@@ -97,9 +100,8 @@ class Game(commands.Cog):
         msg += f"Others can join by typing `!{self.game_abbrev} join {session.room_id}`"
         if ctx.guild != None:
             msg += " or by reacting to this message with ▶️."
-            join_message = await ctx.channel.send(msg)
-            session.message_join = join_message
-            await join_message.add_reaction("▶️")
+            session.message_join = await ctx.channel.send(msg)
+            await session.message_join.add_reaction("▶️")
             return
         await ctx.channel.send(msg)
 

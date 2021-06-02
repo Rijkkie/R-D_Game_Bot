@@ -1,9 +1,10 @@
 #===============================================================================
-# Blackjack v1.1
-# - Last Updated: 30 May 2021
+# Blackjack v1.2
+# - Last Updated: 02 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 02 Jun 2021 - Added support for inactivity timer of sessions. -YJ
 # 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
 #               join(), which allows for better specialization. -YJ
 # 23 May 2021 - All classes now extend a base class. -YJ
@@ -123,8 +124,8 @@ class BlackjackPlayer(Player):
 
 #Session Class
 class BlackjackSession(Session):
-    def __init__(self, game_sessions):
-        Session.__init__(self, game_sessions)
+    def __init__(self, parent):
+        Session.__init__(self, parent)
         self.__max_players = 7
         self.__dealer = BlackjackPlayer(None)
         self.__betting_active = False
@@ -213,6 +214,14 @@ class BlackjackCog(Game):
     def has_game_started(self, session):
         return session.round > 0
 
+    #Remove session on inactivity timeout.
+    async def timeout_session(self, session):
+        if session.message_board != None:
+            msg = f"{self.game_name} room {session.room_id} has timed out due to inactivity."
+            await session.message_board.edit(content=msg)
+            await session.message_board.clear_reactions()
+        await Game.timeout_session(self, session)
+
     #Generate game board message.
     def generate_board_message(self, session):
         msg = f"**Blackjack Room {session.room_id}"
@@ -283,6 +292,7 @@ class BlackjackCog(Game):
 
     #Send betting message, add reactions.
     async def setup_beginround(self, session, channel):
+        session.inactivity_timer_restart()
         session.betting_active = True
         session.dealer.hand = []
         for player in session.players:
@@ -294,6 +304,7 @@ class BlackjackCog(Game):
 
     #Deal cards, send hit/stand message, add reactions.
     async def setup_midround(self, session):
+        session.inactivity_timer_restart()
         session.betting_active = False
         session.dealer.give_card(random_card())
         for player in session.players:
@@ -310,6 +321,7 @@ class BlackjackCog(Game):
 
     #Dealer draws until 17+, process wins/ties/losses.
     async def setup_endround(self, session):
+        session.inactivity_timer_restart()
         while session.dealer.value < 17:
             session.dealer.give_card(random_card())
         for player in session.players:
@@ -342,12 +354,13 @@ class BlackjackCog(Game):
 
     #Setup the initial variables and message(s) of the game.
     async def setup_game(self, session, channel):
+        await Game.setup_game(self, session, channel)
         session.round = 1
         await self.setup_beginround(session, channel)
 
     #Handle additional checks required when a player joins the game.
     async def add_player(self, session, user):
-        session.add_player(user)
+        await Game.add_player(self, session, user)
         if session.message_board != None:
             msg = self.generate_board_message(session)
             await session.message_board.edit(content=msg)
@@ -385,7 +398,7 @@ class BlackjackCog(Game):
     #Register a new game room.
     @blackjack.command(aliases=["create", "register", "host"])
     async def new(self, ctx):
-        session = BlackjackSession(self.game_sessions)
+        session = BlackjackSession(self)
         player = BlackjackPlayer(ctx.author)
         await Game.new(self, ctx, session, player)
 

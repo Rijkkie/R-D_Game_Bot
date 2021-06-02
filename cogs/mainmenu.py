@@ -1,15 +1,15 @@
 #===============================================================================
-# Main Menu v1.0
+# Main Menu v1.1
 # - Last Updated: 30 May 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 02 Jun 2021 - Added inactivity timer to sessions. -YJ
 # 30 May 2021 - File started and finished. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
-# - Menu messages pile up and never time out, which is a pretty huge deal.
-#   Implement a time-out, preferably along with room ID time-outs. -YJ
+# 
 #===============================================================================
 # Description
 # ..............................................................................
@@ -19,11 +19,12 @@
 
 #Import Modules
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 class MainMenuSession:
-    def __init__(self, ctx, message_menu):
+    def __init__(self, ctx, parent, message_menu):
         self.__ctx = ctx
+        self.__parent = parent
         self.__message_menu = message_menu
 
     @property
@@ -33,6 +34,12 @@ class MainMenuSession:
     @property
     def message_menu(self):
         return self.__message_menu
+
+    #Inactivity timer.
+    @tasks.loop(minutes=10.0, count=2)
+    async def inactivity_timer(self):
+        if self.inactivity_timer.current_loop != 0:
+            await self.__parent.timeout_session(self)
 
 #Cog Class
 class MainMenuCog(commands.Cog):
@@ -52,6 +59,11 @@ class MainMenuCog(commands.Cog):
         msg += "The main menu shows all games available for play. Select one with the specified command or reaction!"
         return msg
 
+    #Remove session on inactivity timeout. Override if needed.
+    async def timeout_session(self, session):
+        await session.message_menu.clear_reactions()
+        self.menu_sessions.remove(session)
+
     #Primary Functions
     #With no arguments specified, send game instructions.
     @commands.group(name="mainmenu", aliases=["main_menu", "main", "menu", "games", "game", "list", "games_list", "game_list", "gameslist", "gamelist"], invoke_without_command=True)
@@ -63,7 +75,7 @@ class MainMenuCog(commands.Cog):
         msg += "4️⃣ - `!hm` - Hangman\n"
         msg += "5️⃣ - `!ttt` - Tic-tac-toe"
         message_menu = await ctx.channel.send(msg)
-        self.menu_sessions.append(MainMenuSession(ctx, message_menu))
+        self.menu_sessions.append(MainMenuSession(ctx, self, message_menu))
         await message_menu.add_reaction("1️⃣")
         await message_menu.add_reaction("2️⃣")
         await message_menu.add_reaction("3️⃣")

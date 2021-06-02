@@ -1,9 +1,10 @@
 #===============================================================================
-# Connect Four v2.0
-# - Last Updated: 30 May 2021
+# Connect Four v2.1
+# - Last Updated: 02 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 02 Jun 2021 - Added support for inactivity timer of sessions. -YJ
 # 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
 #               join(), which allows for better specialization; Added database
 #               support. -YJ
@@ -40,13 +41,11 @@ from common.player import Player
 from common.game import Game
 from common.emoji import number_to_emoji, emoji_to_number
 
-import random
-
 #Session Setup
 class ConnectFourSession(Session):
     #Define variables.
-    def __init__(self, game_sessions):
-        Session.__init__(self, game_sessions)
+    def __init__(self, parent):
+        Session.__init__(self, parent)
         self.__player_turn = 0
         self.__message_board = None
         self.__board_state = [["0","0","0","0","0","0","0"],
@@ -109,6 +108,14 @@ class ConnectFourCog(Game):
     #Get maximum amount of players of a session.
     def get_max_players(self, session):
         return 2
+
+    #Remove session on inactivity timeout.
+    async def timeout_session(self, session):
+        if session.message_board != None:
+            msg = f"{self.game_name} room {session.room_id} has timed out due to inactivity."
+            await session.message_board.edit(content=msg)
+            await session.message_board.clear_reactions()
+        await Game.timeout_session(self, session)
 
     #Generate game board message.
     def generate_board_message(self, session):
@@ -180,6 +187,7 @@ class ConnectFourCog(Game):
 
     #Place token in tile, check for winner, edit message and clear reaction.
     async def process_turn(self, session, column, reaction):
+        session.inactivity_timer_restart()
         #Prevent placing in a full column.
         if self.is_column_full(session.board_state, column):
             return
@@ -216,6 +224,8 @@ class ConnectFourCog(Game):
 
     #Generate and send first message.
     async def setup_game(self, session, channel):
+        await Game.setup_game(self, session, channel)
+        session.inactivity_timer_restart()
         session.shuffle_players()
         msg = self.generate_board_message(session)
         board_message = await channel.send(msg)
@@ -251,7 +261,7 @@ class ConnectFourCog(Game):
     #Register a new game room.
     @connectfour.command(aliases=["start", "begin", "create", "register", "host"])
     async def new(self, ctx):
-        session = ConnectFourSession(self.game_sessions)
+        session = ConnectFourSession(self)
         player = Player(ctx.author)
         await Game.new(self, ctx, session, player)
 

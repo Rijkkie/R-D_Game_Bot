@@ -1,9 +1,11 @@
 #===============================================================================
-# Hangman v1.0
-# - Last Updated: 30 May 2021
+# Hangman v1.1
+# - Last Updated: 02 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 02 Jun 2021 - Fixed me forgetting to implement has_game_started last time;
+#               Added support for inactivity timer of sessions. -YJ
 # 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
 #               join(), which allows for better specialization. -YJ
 # 25 May 2021 - Finished file. -YJ
@@ -35,8 +37,8 @@ import os.path
 
 #Session Class
 class HangmanSession(Session):
-    def __init__(self, game_sessions):
-        Session.__init__(self, game_sessions)
+    def __init__(self, parent):
+        Session.__init__(self, parent)
         self.__max_players = 6
         self.__executioner = None
         self.__player_turn = 0
@@ -146,7 +148,15 @@ class HangmanCog(Game):
 
     #Check whether a game has started yet.
     def has_game_started(self, session):
-        return False
+        return session.executioner != None
+
+    #Remove session on inactivity timeout.
+    async def timeout_session(self, session):
+        if session.message_board != None:
+            msg = f"{self.game_name} room {session.room_id} has timed out due to inactivity."
+            await session.message_board.edit(content=msg)
+            await session.message_board.clear_reactions()
+        await Game.timeout_session(self, session)
 
     #Check board state for a winning position.
     def is_game_won(self, session):
@@ -244,6 +254,8 @@ class HangmanCog(Game):
 
     #Setup the initial variables and message(s) of the game.
     async def setup_game(self, session, channel):
+        await Game.setup_game(self, session, channel)
+        session.inactivity_timer_restart()
         session.shuffle_players()
         session.executioner = self.client.user #TODO: Let players be executioner.
         session.secret_word = self.get_dictionary_word().upper()
@@ -251,6 +263,7 @@ class HangmanCog(Game):
         session.message_board = await channel.send(msg)
 
     async def process_turn(self, session, letter):
+        session.inactivity_timer_restart()
         session.guessed_letters.append(letter.upper())
         if self.is_game_won(session) == True or self.is_game_lost(session) == True:
             msg = self.generate_board_message(session)
@@ -305,7 +318,7 @@ class HangmanCog(Game):
     #Register a new game room.
     @hangman.command(aliases=["create", "register", "host"])
     async def new(self, ctx):
-        session = HangmanSession(self.game_sessions)
+        session = HangmanSession(self)
         player = Player(ctx.author)
         await Game.new(self, ctx, session, player)
 
