@@ -344,7 +344,10 @@ class CheckersCog(Game):
                 if self.stones_left(self.board,"Green") == 0 or self.stones_left(self.board,"Purple") == 0:
                     msg = self.board_to_msg(self.board,self.value,Empty([-1,-1]))
                     winner = session.players[1].user
-                    msg += create_winner_message(winner.name)
+                    dbfunctions.boardgame_action("Checkers", winner.id, session.message_board, 'w')
+                    loser = session.players[0].user
+                    dbfunctions.boardgame_action("Checkers", loser.id, session.message_board, 'l')
+                    msg += "\n\n" + winner.name + " has won the game!\n"
                 session.inactivity_timer_restart()
                 await game_board.edit(content=msg)
 
