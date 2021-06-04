@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block style %}
+<style>
+	h1 {
+		font-family: Calibri;
+		color: #0a588f;
+
+	}
+    table{
+		margin-left: 20px;
+		border-collapse: collapse;
+	}
+</style>
+{% endblock %}
+{% block title %}Discord Bot{% endblock %}
+{% block content %}
+<h1>&emsp;Fill in a name to find stats and balance of a user</h1>
+<form action="#" method="POST" alignment="center">
+	<p>&emsp; Name:</p>
+	<p>&emsp; <input type="text" name="nm" /> <input type="submit" value="submit"/></p>
+</form>
+
+<form action="#" method="POST">
+    <table>
+    <!-- Table headers -->
+        <th>
+            <tr style="color: #ffffff; background-color: #0a588f ">
+                <td>Name</td>
+                <td>Tag</td>
+            </tr>
+        </th>
+
+        {%for i in range(0, len)%}
+        <!-- table rows -->
+        <tr>
+            <td>{{users[i][1]}}</td>
+            <td>#{{users[i][2]}}</td>
+            <td><a href="/personal/{{users[i][0]}}">View</a></td>
+        {%endfor%}
+        </tr>
+    </table>
+</form>
+{% endblock %}
