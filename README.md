@@ -22,3 +22,5 @@ This will be a lot more complicated, so I will be giving a brief explanation how
 Install and enable apache2 and mod_wsgi and then change the apache DocumentRoot to the gamebot directory. And then configure the mod_wsgi 
 If you know how to setup a virtual environment using mod_wsgi, which we weren't able to figure out you could use the same virtual environment as explained in how to setup the bot and the database.
 Instead we didn't know how to do that, so we globally install the packages. And changing the DocumentRoot directory did not work for us, so we moved the FlaskApp folder to /var/www and added the config file and database folder at /var/www/FlaskApp. I think it was very unfortunate that we weren't able to keep everything in one project.
+
+A pretty handy link on how to deploy a flask application https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-an-ubuntu-vps
