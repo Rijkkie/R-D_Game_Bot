@@ -12,7 +12,7 @@ class DatabaseEventsCog(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         # Creates the database/tables if they did not exist already.
-        dbfunctions.db_startup()
+        # dbfunctions.db_startup()  # Had to remove this function, because the database sometimes kept hanging.
         # On startup, puts all the guilds and users who aren't bots in the database.
         for guild in self.client.guilds:
             dbfunctions.update_guild(guild)
@@ -69,18 +69,18 @@ class DatabaseEventsCog(commands.Cog):
             return
         # Updates the user in the database and retrieves the user's stats.
         dbfunctions.update_user(user)
-        stats = dbfunctions.get_stats(user.id)
-        # Retrieves all the user's ranks from every game.
-        ranks = []
-        for i in range(len(stats)):
-            ranks.append(dbfunctions.stats_rank(stats[i][0], user.id))
+        # Gets the stats from every game of the specified user.
+        games = dbfunctions.get_games()
+        stats = []
+        for i in range(len(games)):
+            stats.append(dbfunctions.get_stats(games[i][0], user.id))
         # Retrieves the sum of the stats and score rank needed for the embed.
         total_stats = dbfunctions.total_boardgame_stats(user.id)
         # Checks if total_stats is not None, which might be because there are no games in the database yet.
         if not total_stats:
             await ctx.send("No boardgames have been played yet! Play a game first!")
             return
-        await ctx.send(embed=dbembeds.stats(user, stats, ranks, total_stats))
+        await ctx.send(embed=dbembeds.stats(user, stats, total_stats))
 
 
     # Add per server? Same with stats
