@@ -89,7 +89,7 @@ def app_topboardgame():
 
 def search_names(name):
     wildcards = '%' + name.lower() + '%'
-    return retrieve_query(sqlQueries["search_names"], (wildcards, wildcards))
+    return retrieve_query(sqlQueries["search_names"], (wildcards,))
 
 
 # Returns the columns of the results of the given query from the database.
@@ -180,8 +180,7 @@ sqlQueries = {
       "search_names": """
       SELECT id, name, discriminator
       FROM user
-      WHERE id like %s
-      OR name like %s;
+      WHERE name like %s;
       """,
       "get_user": """
       SELECT id, name, discriminator
