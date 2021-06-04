@@ -52,19 +52,21 @@ from common.session import Session
 from common.player import Player
 from common.game import Game
 from common.card import Card, random_card
+from database import dbfunctions
 
 import random
 import math
 
 #Player Class
 class BlackjackPlayer(Player):
-    def __init__(self, user: User):
+    def __init__(self, user: User, guild_id=None):
         Player.__init__(self, user)
         self.__hand = []
         self.__funds = 100
         self.__bet = 10
         self.__doubled_down = False
         self.__turn_finished = False
+        self.__guild_id = guild_id
 
     @property
     def hand(self):
@@ -85,6 +87,10 @@ class BlackjackPlayer(Player):
     @property
     def turn_finished(self):
         return self.__turn_finished
+
+    @property
+    def guild_id(self):
+        return self.__guild_id
 
     @property
     def value(self):
@@ -259,6 +265,7 @@ class BlackjackCog(Game):
                     msg += "👑"
                 else:
                     msg += "🔹"
+                dbfunctions.transaction(player.user.id, player.guild_id, str(player.funds))
             msg += f" **${player.funds}** {player.user.mention}"
             if session.round <= session.max_rounds:
                 msg += ": "
@@ -399,13 +406,13 @@ class BlackjackCog(Game):
     @blackjack.command(aliases=["create", "register", "host"])
     async def new(self, ctx):
         session = BlackjackSession(self)
-        player = BlackjackPlayer(ctx.author)
+        player = BlackjackPlayer(ctx.author, ctx.guild.id)
         await Game.new(self, ctx, session, player)
 
     #Join an existing game room by message.
     @blackjack.command(aliases=["enter"])
     async def join(self, ctx, room_id=None):
-        player = BlackjackPlayer(ctx.author)
+        player = BlackjackPlayer(ctx.author, ctx.guild.id)
         await Game.join(self, ctx, room_id, player)
 
     #Start a game.
