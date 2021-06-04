@@ -25,3 +25,6 @@ If you know how to setup a virtual environment using mod_wsgi, which we weren't 
 Instead we didn't know how to do that, so we globally installed the packages. And changing the DocumentRoot directory did not work for us either, so we moved the FlaskApp folder to /var/www and added the config file and database folder at /var/www/FlaskApp. I think it was very unfortunate that we weren't able to keep everything in one project.
 
 A pretty handy link on how to deploy a flask application https://www.digitalocean.com/community/tutorials/how-to-deploy-a-flask-application-on-an-ubuntu-vps
+
+
+You could however easily open the website on the localhost without apache2 and mod_wsgi, by just running app.py. This does require the database to be set up though!
