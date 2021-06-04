@@ -4,12 +4,14 @@
 #===============================================================================
 # Update History
 # ..............................................................................
+# 04 Jun 2021 - Forgot to actually start the inactivity timer, fixed; Message
+#               now gives feedback to when the timer timed out. -YJ
 # 02 Jun 2021 - Added inactivity timer to sessions. -YJ
 # 30 May 2021 - File started and finished. -YJ
 #===============================================================================
 # Notes
 # ..............................................................................
-# 
+#
 #===============================================================================
 # Description
 # ..............................................................................
@@ -26,6 +28,7 @@ class MainMenuSession:
         self.__ctx = ctx
         self.__parent = parent
         self.__message_menu = message_menu
+        self.inactivity_timer.start()
 
     @property
     def ctx(self):
@@ -61,6 +64,9 @@ class MainMenuCog(commands.Cog):
 
     #Remove session on inactivity timeout. Override if needed.
     async def timeout_session(self, session):
+        msg = session.message_menu.content + "\n"
+        msg += "Reactions have timed out. Use the text command or call for a new main menu message."
+        await session.message_menu.edit(content=msg)
         await session.message_menu.clear_reactions()
         self.menu_sessions.remove(session)
 
