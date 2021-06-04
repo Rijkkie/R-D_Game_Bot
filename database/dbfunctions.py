@@ -79,14 +79,17 @@ def top_boardgame(offset):
     return retrieve_query(sqlQueries["top_boardgame"], (offset,))
 
 
+# Used by the Flask application to retrieve the top balance leaderboard.
 def app_topbal():
     return retrieve_query(sqlQueries["app_topbal"], None)
 
 
+# Used by the Flask application to retrieve the top board game leaderboard.
 def app_topboardgame():
     return retrieve_query(sqlQueries["app_topboardgame"], None)
 
 
+# Used by the Flask application to retrieve the users searched by name.
 def search_names(name):
     wildcards = '%' + name.lower() + '%'
     return retrieve_query(sqlQueries["search_names"], (wildcards,))
