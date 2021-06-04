@@ -1,31 +1,23 @@
 import mysql.connector as mysql
 import json
+import os
 
-with open("./config.json") as config_file:
+path = os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))
+with open(str(path) + "/config.json", 'r') as config_file:
     config = json.load(config_file)
+    config_file.close()
 cnx = mysql.connect(**config["mysql"])
 cursor = cnx.cursor()
 
-# I was not really sure if I should have separated the queries from the functions and place them in queries.sql or not
-# Because it made the overview of the functions a lot cleaner.
-# Instead of separating the queries to queries.sql, I decided to create a dictionary instead.
-# Removed this piece of code and replaced it with a dictionary of queries at the bottom of this file.
-# sqlFile = open('database/dbscripts/queries.sql', 'r')
-# sqlQueries = sqlFile.read().split(';')
-# sqlFile.close()
-
-# The view 'balance' has a standard money value for every user (1000) that is implemented on the database,
-# The same goes for the view 'stats' with 100 points per win, 50 per draw and 10 per loss.
-# Change the values in dbtables.sql and drop the tables and
-
 
 # Whenever this function is called, it will create the database and tables if they did not already exist.
-def db_startup():
-    sql_file = open('database/dbscripts/dbtables.sql', 'r')
-    sql_queries = sql_file.read().split(';')
-    for query in sql_queries:
-        cursor.execute(query)
-    cnx.commit()
+# def db_startup():
+#     sql_file = open(str(path) + "/database/dbscripts/dbtables.sql", 'r')
+#     sql_queries = sql_file.read().split(';')
+#     for query in sql_queries:
+#         cursor.execute(query)
+#     cnx.commit()
+#     sql_file.close()
 
 
 # Used for updating the user.
@@ -58,15 +50,18 @@ def get_balance(user_id):
 
 
 # Used to retrieve the stats of a specific user.
-def get_stats(user_id):
-    return retrieve_query(sqlQueries["get_stats"], (user_id,))
+def get_stats(game, user_id):
+    return retrieve_query(sqlQueries["get_stats"], (game, user_id))
 
 
-# Used to retrieve the stats rank of a specific user and specific game.
-def stats_rank(game, user_id):
-    values = {'game': game, 'user_id': user_id}
-    count = retrieve_query(sqlQueries["stats_rank"], values)[0][0]
-    return 1 if (count == 0) else count + 1
+# Used to get all the games in the database.
+def get_games():
+    return retrieve_query(sqlQueries["get_games"], None)
+
+
+# Used to get the user from the database with the given userid.
+def get_user(user_id):
+    return retrieve_query(sqlQueries["get_user"], (user_id,))
 
 
 # Used to retrieve the sum of the boardgame stats and their rank of a specific user.
@@ -82,6 +77,19 @@ def top_balance(offset):
 # Used to retrieve a leaderboard page of the global stats in descending order.
 def top_boardgame(offset):
     return retrieve_query(sqlQueries["top_boardgame"], (offset,))
+
+
+def app_topbal():
+    return retrieve_query(sqlQueries["app_topbal"], None)
+
+
+def app_topboardgame():
+    return retrieve_query(sqlQueries["app_topboardgame"], None)
+
+
+def search_names(name):
+    wildcards = '%' + name.lower() + '%'
+    return retrieve_query(sqlQueries["search_names"], (wildcards, wildcards))
 
 
 # Returns the columns of the results of the given query from the database.
@@ -124,17 +132,18 @@ sqlQueries = {
       "get_balance": """
       SELECT money, ranks FROM balance WHERE user_id = %s;
       """,
-      "get_stats": """
-      SELECT * FROM stats WHERE user_id = %s;
+      "get_games": """
+      SELECT DISTINCT game
+      FROM boardgame_action;
       """,
-      "stats_rank": """
-      SELECT count(*)
-      FROM (SELECT DISTINCT score from (SELECT * FROM stats WHERE game like %(game)s) as g) as score
-      WHERE score > (
-        SELECT score
-        FROM (SELECT DISTINCT * from (SELECT * FROM stats WHERE game like %(game)s) as g) as score
-        WHERE user_id = %(user_id)s
-        );
+      "get_stats": """
+      SELECT *
+      FROM    
+         (SELECT *, rank() over (ORDER BY score DESC) as ranks
+         FROM stats
+         WHERE game like %s
+         ) as topstats
+      WHERE user_id = %s
       """,
       "total_boardgame_stats": """
       SELECT *
@@ -155,5 +164,28 @@ sqlQueries = {
       ORDER BY score DESC
       LIMIT 10
       OFFSET %s;
+      """,
+      "app_topbal": """
+      SELECT name, money, user_id, discriminator, ranks
+      FROM user, balance
+      WHERE user.id = balance.user_id
+      ORDER BY money DESC
+      """,
+      "app_topboardgame": """
+      SELECT user_id, name, discriminator, wins, losses, draws, score, ranks
+      FROM user, total_boardgame_stats
+      WHERE user.id = total_boardgame_stats.user_id
+      ORDER BY score DESC
+      """,
+      "search_names": """
+      SELECT id, name, discriminator
+      FROM user
+      WHERE id like %s
+      OR name like %s;
+      """,
+      "get_user": """
+      SELECT id, name, discriminator
+      FROM user
+      WHERE id = %s
       """
 }

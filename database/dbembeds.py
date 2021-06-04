@@ -9,7 +9,7 @@ def balance(user, money):
     return embed
 
 
-def stats(user, user_stats, ranks, total_stats):
+def stats(user, user_stats, total_stats):
     width = 12
     t1 = """
 ```css
@@ -22,7 +22,7 @@ Game         w/l/d     Score    Rank
 Boardgames played: {total_stats[0][1] + total_stats[0][2] + total_stats[0][3]}
 ```"""
     for i in range(len(user_stats)):
-        t2 += f"{user_stats[i][0]:{width}} {str(user_stats[i][2])+'/'+str(user_stats[i][3])+'/'+str(user_stats[i][4]):{width-6}} {user_stats[i][5]:{width-4}}     #{ranks[i]}\n"
+        t2 += f"{user_stats[i][0][0]:{width}} {str(user_stats[i][0][2])+'/'+str(user_stats[i][0][3])+'/'+str(user_stats[i][0][4]):{width-6}} {user_stats[i][0][5]:{width-4}}     #{user_stats[i][0][6]}\n"
     embed = discord.Embed(title=" ", description="```      Personal Boardgame Stats```" + t1 + t2 + t3)
     embed.set_author(name=f"{user.name}#{user.discriminator}", icon_url=user.avatar_url)
     return embed
