@@ -1,6 +1,7 @@
 from flask import Flask, render_template, url_for, redirect, request
+import sys
+sys.path.append('..')
 from database import dbfunctions
-
 # TO DO: Edit formatting
 
 app = Flask(__name__)
