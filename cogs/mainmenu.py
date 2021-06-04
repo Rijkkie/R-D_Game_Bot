@@ -72,7 +72,7 @@ class MainMenuCog(commands.Cog):
 
     #Primary Functions
     #With no arguments specified, send game instructions.
-    @commands.group(name="mainmenu", aliases=["main_menu", "main", "menu", "games", "game", "list", "games_list", "game_list", "gameslist", "gamelist"], invoke_without_command=True)
+    @commands.group(name="mainmenu", aliases=["main_menu", "main", "menu", "games", "game", "list", "games_list", "game_list", "gameslist", "gamelist"], case_insensitive=True, invoke_without_command=True)
     async def mainmenu(self, ctx):
         msg = "**Main Menu**\n"
         msg += "1️⃣ - `!bj` - Blackjack\n"

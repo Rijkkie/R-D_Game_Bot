@@ -41,6 +41,8 @@ from common.player import Player
 from common.game import Game
 from common.emoji import number_to_emoji, emoji_to_number
 
+from database import dbfunctions
+
 #Session Setup
 class ConnectFourSession(Session):
     #Define variables.
@@ -244,7 +246,7 @@ class ConnectFourCog(Game):
 
     #Primary functions
     #With no arguments specified, send game instructions.
-    @commands.group(name="connectfour", aliases=["c4", "cf", "connect4", "connect_four", "connect_4", "4row", "fourinarow", "four_in_a_row", "4inarow", "4_in_a_row"], invoke_without_command=True)
+    @commands.group(name="connectfour", aliases=["c4", "cf", "connect4", "connect_four", "connect_4", "4row", "fourinarow", "four_in_a_row", "4inarow", "4_in_a_row"], case_insensitive=True, invoke_without_command=True)
     async def connectfour(self, ctx):
         await ctx.channel.send(self.instructions())
 

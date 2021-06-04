@@ -14,7 +14,7 @@
 #===============================================================================
 # Notes
 # ..............................................................................
-# 
+#
 #===============================================================================
 # Description
 # ..............................................................................
@@ -53,6 +53,7 @@ from common.session import Session
 from common.player import Player
 from common.game import Game
 from common.card import Card, random_card
+
 from database import dbfunctions
 
 import random
@@ -390,7 +391,7 @@ class BlackjackCog(Game):
 
     #Primary Functions
     #With no arguments specified, send game instructions.
-    @commands.group(name="blackjack", aliases=["bj", "21"], invoke_without_command=True)
+    @commands.group(name="blackjack", aliases=["bj", "21"], case_insensitive=True, invoke_without_command=True)
     async def blackjack(self, ctx):
         await ctx.channel.send(self.instructions())
 
@@ -459,7 +460,7 @@ class BlackjackCog(Game):
         await ctx.channel.send(content=msg, delete_after=15.0)
 
     #Edit a room's settings.
-    @blackjack.group(name="setting", aliases=["set", "settings", "edit", "mod", "modify", "rule", "rules"], invoke_without_command=True)
+    @blackjack.group(name="setting", aliases=["set", "settings", "edit", "mod", "modify", "rule", "rules"], case_insensitive=True, invoke_without_command=True)
     async def setting(self, ctx, room_id=None):
         #With no arguments specified, send setting instructions.
         if room_id == None:

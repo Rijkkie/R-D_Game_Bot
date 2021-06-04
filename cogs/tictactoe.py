@@ -223,7 +223,7 @@ class TictactoeCog(Game):
 
     #Primary functions
     #With no arguments specified, send game instructions.
-    @commands.group(name="tictactoe", aliases=["ttt", "tic-tac-toe"], invoke_without_command=True)
+    @commands.group(name="tictactoe", aliases=["ttt", "tic-tac-toe"], case_insensitive=True, invoke_without_command=True)
     async def tictactoe(self, ctx):
         await ctx.channel.send(self.instructions())
 

@@ -1,9 +1,11 @@
 #===============================================================================
-# Hangman v1.1
-# - Last Updated: 02 Jun 2021
+# Hangman v1.2
+# - Last Updated: 04 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 04 Jun 2021 - Fixed me forgetting to note max mistakes in settings message;
+#               Bot will no longer choose secret words shorter than 4 chars. -YJ
 # 02 Jun 2021 - Fixed me forgetting to implement has_game_started last time;
 #               Added support for inactivity timer of sessions. -YJ
 # 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
@@ -246,10 +248,10 @@ class HangmanCog(Game):
         filename = "words.txt"
         if os.path.exists(filename):
             file = open(filename)
-            wordlist = file.read().split()
+            wordlist = [word for word in file.read().split() if len(word) >= 4]
             file.close()
-            word = random.choice(wordlist)
-            return word
+            secretword = random.choice(wordlist)
+            return secretword
         return "Hangman"
 
     #Setup the initial variables and message(s) of the game.
@@ -301,7 +303,7 @@ class HangmanCog(Game):
 
     #Primary Functions
     #With no arguments specified, send game instructions.
-    @commands.group(name="hangman", aliases=["hm"], invoke_without_command=True)
+    @commands.group(name="hangman", aliases=["hm"], case_insensitive=True, invoke_without_command=True)
     async def hangman(self, ctx):
         await ctx.channel.send(self.instructions())
 
@@ -375,7 +377,7 @@ class HangmanCog(Game):
         await ctx.channel.send(content=msg, delete_after=15.0)
 
     #Edit a room's settings.
-    @hangman.group(name="setting", aliases=["set", "settings", "edit", "mod", "modify", "rule", "rules"], invoke_without_command=True)
+    @hangman.group(name="setting", aliases=["set", "settings", "edit", "mod", "modify", "rule", "rules"], case_insensitive=True, invoke_without_command=True)
     async def setting(self, ctx, room_id=None):
         #With no arguments specified, send setting instructions.
         if room_id == None:
@@ -390,7 +392,8 @@ class HangmanCog(Game):
         for session in self.game_sessions:
             if room_id.upper() == session.room_id:
                 msg = f"**Hangman Room {session.room_id} Settings**\n"
-                msg += f"Maximum Players: {session.max_players}"
+                msg += f"Maximum Players: {session.max_players}\n"
+                msg += f"Maximum Mistakes: {session.max_mistakes}"
                 await ctx.channel.send(msg)
                 return
         msg = f"Hangman setting or room {room_id} not found."

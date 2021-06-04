@@ -36,9 +36,10 @@ from common.game import Game
 from common.emoji import number_to_emoji, emoji_to_number, string_to_emoji
 from common.message import create_winner_message
 
+from database import dbfunctions
+
 from copy import copy, deepcopy
 from abc import ABC, abstractmethod
-from database import dbfunctions
 
 #Checkers Session
 class CheckersSession(Session):
@@ -221,7 +222,7 @@ class CheckersCog(Game):
 
     #Primary Functions
     #With no arguments specified, send game instructions.
-    @commands.group(name="checkers", aliases=["ch", "chck", "checker", "draughts"], invoke_without_command=True)
+    @commands.group(name="checkers", aliases=["ch", "chck", "checker", "draughts"], case_insensitive=True, invoke_without_command=True)
     async def checkers(self, ctx, *args):
         await ctx.channel.send(self.instructions())
 
