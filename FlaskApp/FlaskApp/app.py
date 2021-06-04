@@ -6,9 +6,6 @@ from database import dbfunctions
 
 app = Flask(__name__)
 
-def click():
-    print("hello")
-
 @app.route("/")
 def home():
     return render_template("index.html")
