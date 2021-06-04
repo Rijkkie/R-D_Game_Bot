@@ -38,6 +38,7 @@ from common.message import create_winner_message
 
 from copy import copy, deepcopy
 from abc import ABC, abstractmethod
+from database import dbfunctions
 
 #Checkers Session
 class CheckersSession(Session):
