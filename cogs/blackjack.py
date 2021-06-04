@@ -1,9 +1,10 @@
 #===============================================================================
-# Blackjack v1.2
-# - Last Updated: 02 Jun 2021
+# Blackjack v1.3
+# - Last Updated: 04 Jun 2021
 #===============================================================================
 # Update History
 # ..............................................................................
+# 04 Jun 2021 - Added database support. -YJ
 # 02 Jun 2021 - Added support for inactivity timer of sessions. -YJ
 # 30 May 2021 - Reaction join now goes through cog's join() instead of Game's
 #               join(), which allows for better specialization. -YJ
@@ -13,7 +14,7 @@
 #===============================================================================
 # Notes
 # ..............................................................................
-# - Add database support. -YJ
+# 
 #===============================================================================
 # Description
 # ..............................................................................
@@ -265,7 +266,6 @@ class BlackjackCog(Game):
                     msg += "👑"
                 else:
                     msg += "🔹"
-                dbfunctions.transaction(player.user.id, player.guild_id, str(player.funds))
             msg += f" **${player.funds}** {player.user.mention}"
             if session.round <= session.max_rounds:
                 msg += ": "
@@ -355,6 +355,8 @@ class BlackjackCog(Game):
                     player.doubled_down = False
             await self.setup_beginround(session, session.message_board.channel)
             return
+        for player in session.players:
+            dbfunctions.transaction(player.user.id, player.guild_id, str(player.funds))
         msg = self.generate_board_message(session)
         await session.message_board.channel.send(msg)
         self.game_sessions.remove(session)
